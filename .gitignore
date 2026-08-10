@@ -1,0 +1,18 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+
+# 临时输出
+outputs/
+*.log
+*.tmp
+
+# 不要把 .env / 凭据提交
+.env
+.env.local
