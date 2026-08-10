@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "skill": "选题工坊",
+  "updated": "2026-08-10",
+  "description": "固化测试样例。用于 dry_run / 人工验收选题工坊。每个用例含：场景、用户说法、期望行为、必含字段、禁区。不自动调用外部检索。",
+  "tests": [
+    {
+      "id": "full-pipeline-001",
+      "name": "全流程启动（文献已备）",
+      "scenario": "跑全部",
+      "prompt": "/选题工坊\n跑全部。文献已准备：6 篇气候金融/绿色转型相关 PDF；模糊领域：气候风险是否以及如何影响中国 A 股上市公司的绿色转型；方法偏好：DID/IV。",
+      "expected_behavior": [
+        "识别为全流程入口，不跳过 Phase 0 已提供信息",
+        "确认文献数量与模糊领域后进入 Step 1 输入确认",
+        "不调用 WebSearch / arXiv / Semantic Scholar 等自动检索",
+        "在 Step 3 与 Step 4 强制暂停等待用户选择/确认"
+      ],
+      "must_produce_fields": [
+        "Step1-input 或等价输入确认",
+        "文献矩阵或要点卡路径提示",
+        "候选主题 3 主推 + 2 备选 或 topic_scores 结构"
+      ],
+      "forbidden": [
+        "自动检索新文献",
+        "在用户未选主题前直接写满 Step 4–6",
+        "声称已下载/OCR 用户未提供的 PDF"
+      ],
+      "reference_example": "examples/气候风险对企业绿色转型/",
+      "gate": {
+        "after_full_run": "python scripts/check_step.py --workdir <dir> --step all"
+      }
+    },
+    {
+      "id": "boundary-too-few-papers-001",
+      "name": "边界·文献不足 5 篇",
+      "scenario": "输入校验",
+      "prompt": "/选题工坊\n跑全部。我只有 2 篇 PDF，主题是数字化转型对企业创新。",
+      "expected_behavior": [
+        "停留在 Step 1 或 Phase 0，要求补充文献至至少 5 篇",
+        "解释为什么至少要 5 篇（覆盖性 + gap 派生）",
+        "可以给关键词检索式建议，但不得自动检索"
+      ],
+      "must_produce_fields": [
+        "文献数量不足的明确提示",
+        "补充建议（数量/类型：综述+实证）"
+      ],
+      "forbidden": [
+        "用 2 篇硬编完整 6 步产出",
+        "假装已有足够文献矩阵"
+      ],
+      "gate": {
+        "step1": "文献数 < 5 时 check_step 或流程应阻止进入 Step 2c 主题涌现"
+      }
+    },
+    {
+      "id": "module-gap-001",
+      "name": "子模块·出 gap（前置已有矩阵）",
+      "scenario": "出gap",
+      "prompt": "/选题工坊\n出gap。工作目录是 examples/气候风险对企业绿色转型，矩阵已在 Step2b-literature-matrix.md。",
+      "expected_behavior": [
+        "读取已有矩阵，不要求重新上传全部 PDF",
+        "产出 5 类 gap 中的多条裁定，每条含证据来源与重要性",
+        "即使结论同质也派生外推/方法 gap"
+      ],
+      "must_produce_fields": [
+        "已知区 / 矛盾区 / 空白区 / 方法局限 / 理论外推 中至少 3 类有内容",
+        "每条 gap 的证据来源（指向 L1–L6 或矩阵行）"
+      ],
+      "forbidden": [
+        "忽略已有 Step2b 重头检索文献",
+        "只给空泛'研究不足'而无文献锚点"
+      ],
+      "reference_example": "examples/气候风险对企业绿色转型/Step2c-gap-verdicts.md"
+    }
+  ],
+  "scoring": {
+    "method": "人工 dry_run + scripts/check_step.py",
+    "pass": "expected_behavior 全满足 + forbidden 未触发 + 有参考案例时结构对齐",
+    "fail": "自动检索 / 跳过 checkpoint / 文献不足仍跑完全流程"
+  }
+}

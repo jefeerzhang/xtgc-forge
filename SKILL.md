@@ -8,11 +8,11 @@ description: |
   适用于:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
   触发词:选题工坊、文献综述、提炼主题、从文献找主题、研究假设、文献驱动的选题、
   research question from literature、lit-driven、hypothesis from review、选题框架。
-version: "0.2.7"
+version: "0.2.8"
 license: MIT
 ---
 
-# 选题工坊 v0.2.7
+# 选题工坊 v0.2.8
 
 ## 启动说明(新任务首次响应必须发送)
 
@@ -573,8 +573,8 @@ done
 - [x] 加 `README.md`,讲清安装和触发示例
 - [x] 加 `LICENSE` 文件(MIT)
 - [x] 跑 1 个真实社科选题实测,记录每步产出
-- [ ] 加 `test-prompts.json`,放 2-3 个测试 prompt
-- [ ] example 补输入端材料(文献清单原文),让复现者可对账
+- [x] 加 `test-prompts.json`,放 2-3 个测试 prompt(v0.2.8: full-pipeline / 文献不足 / 出gap)
+- [x] example 补输入端材料(v0.2.8: inputs/00_任务元信息 + literature-list; Step1 与气候案例对齐)
 - [ ] 写 1 篇 README 的"30 秒看明白"展示图
 
 ---
@@ -590,4 +590,5 @@ done
 - **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
 - **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。
 - **v0.2.7**(2026-08-10):**独立审查分离 + 安装链路修复**。review.py 独立审查模板;check-ready.sh 去私有路径;命令入口改为合法 slash 语法;依赖安装引导入 README。
+- **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
 - **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。

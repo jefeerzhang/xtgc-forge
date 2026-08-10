@@ -113,6 +113,8 @@ bash check-ready.sh
 ├── examples/
 │   └── 气候风险对企业绿色转型/            完整跑通的 9 个产出文件
 ├── check-ready.sh                        就绪检查脚本
+├── test-prompts.json                     固化测试样例(3 条)
+├── scripts/                              init/check/review 闸门脚本
 └── outputs/                              当前运行的中间文件
 ```
 
@@ -149,6 +151,7 @@ MIT(可商用、可改编)。
 - **v0.2.3-v0.2.5**:Checkpoint + Grill 追问;3 主推 + 2 备选;刚性闸门。
 - **v0.2.6**:topic_scores.json 6 维评分 + init_project.py 一键初始化。
 - **v0.2.7**:独立审查分离(review.py);安装链路修复——check-ready.sh 去私有路径、命令入口改合法 slash 语法、依赖安装引导入快速开始。
+- **v0.2.8**:example 补 inputs/ 输入端;Step1 与气候案例对齐;test-prompts.json 3 条固化测试。
 
 ## 🙏 致谢
 

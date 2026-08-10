@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 
 echo "================================================"
-echo "  选题工坊 v0.2.7 · 完整实测就绪检查"
+echo "  选题工坊 v0.2.8 · 完整实测就绪检查"
 echo "================================================"
 echo ""
 

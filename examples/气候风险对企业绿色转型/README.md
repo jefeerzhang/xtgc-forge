@@ -50,16 +50,29 @@
 ```
 气候风险对企业绿色转型/
 ├── README.md                                 本文件
-├── Step1-input.md                            输入确认
+├── inputs/                                   【输入端 · 复现起点】
+│   ├── 00_任务元信息.md                      三问答案 + 约束
+│   └── literature-list.md                    6 篇文献清单(无 PDF 全文)
+├── Step1-input.md                            输入确认(与 inputs 对齐)
 ├── Step2a-points.md                          文献要点卡(6 篇)
 ├── Step2b-literature-matrix.md               文献矩阵
-├── Step2c-gap-verdicts.md                    Gap 裁定(9 条)
-├── Step3a-candidate-themes.md                候选主题(3 个)
+├── Step2c-gap-verdicts.md                    Gap 裁定
+├── Step3a-candidate-themes.md                候选主题
 ├── Step3b-selected-theme.md                  选定主题
-├── Step4-hypotheses.md                       研究假设(5 个)
+├── Step4-hypotheses.md                       研究假设
 ├── Step5-identification-strategy.md          因果识别 + IV + 稳健性
-└── Step6-summary.md                          总结 + 后续步骤
+├── Step6-summary.md                          总结 + 后续步骤
+├── topic_scores.json                         6 维评分
+├── review_scan.md                            独立审查(scan)
+└── review_topics.md                          独立审查(topics)
 ```
+
+## 🔁 如何复现对账
+
+1. 读 `inputs/00_任务元信息.md` + `inputs/literature-list.md`（输入端）。
+2. 自行准备对应可读 PDF（**仓库不附 PDF，版权**）。
+3. 对照 Step2–Step6 看结构字段是否齐全，不必逐字一致。
+4. 闸门：`python scripts/check_step.py --workdir examples/气候风险对企业绿色转型 --step all`
 
 ## 🔍 关键文件精读建议
 
@@ -72,6 +85,9 @@
 | 看后续数据收集 + 复现建议 | `Step6-summary.md` |
 
 ## ⚠️ 注意事项
+
+- **v0.2.8**：`Step1-input.md` 已与气候风险案例对齐（此前误混入数字经济文献表）；输入端以 `inputs/` 为准。
+
 
 - 本案例**真实跑了 OCR** 才能产出,但 SKILL.md v0.2.2 已经去掉 OCR 步骤
 - 如果你按当前 SKILL.md v0.2.2 跑,PDF 不可读时会**直接舍弃 + 提醒**(不再做 OCR)
