@@ -1,18 +1,50 @@
 ---
 name: 选题工坊
 description: |
-  社科/人文向的"用户文献 → 综述 → 主题 → 假设"流水线工具。
-  输入用户模糊领域 + 自备的高质量文献 PDF 或引用列表,输出可检验的研究主题 + 研究假设 + (可选)因果识别策略。
-  本 skill 不调用任何自动文献检索(WebSearch / arXiv / PubMed / Semantic Scholar / Sci-Hub)。
-  所有分析必须基于用户上传的文献清单 + 用户给定的初步方向。
-  适用于:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
-  触发词:选题工坊、文献综述、提炼主题、从文献找主题、研究假设、文献驱动的选题、
-  research question from literature、lit-driven、hypothesis from review、选题框架。
-version: "0.2.9"
+  社科人文向的"用户文献 → 选题 + 假设"流程纪律产品。
+  输入用户自备的 PDF 文献(5-50 篇)+ 模糊领域,产出 3-5 个候选主题 + 5 个研究假设 + (可选)因果识别策略。
+  强制 5 次 Checkpoint 硬暂停(文献/矩阵/主题/假设/交付)+ 独立审查 verdict(scan / topics)+ topic_scores 6 维评分。
+  不调任何自动文献检索(WebSearch / arXiv / PubMed / Semantic Scholar / Sci-Hub)。
+  适用:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
+  触发词:选题工坊、开题、选题、找 gap、提假设、文献综述、研究假设、
+  research question from literature、hypothesis from review、lit-driven、
+  开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
+  从 PDF 出选题、文献矩阵、topic score、独立审查、研究计划草稿、选题框架。
+version: "0.3.0"
 license: MIT
 ---
 
-# 选题工坊 v0.2.9
+# 选题工坊 v0.3.0
+
+## 📊 流水线一览(图)
+
+```mermaid
+flowchart TD
+    A[Phase 0 三问启动] -->|BLOCKING 信息不齐| C1[Step 1 文献上传]
+    C1 -->|🛑 #1 文献确认| C2[Step 2a 读 PDF]
+    C2 --> D1[Step 2b 建矩阵]
+    D1 -->|🛑 #2 矩阵审阅| D2[Step 2c Gap 裁定]
+    D2 --> E1[Step 3a 候选主题]
+    E1 -->|🛑 #3 主题选择| E2[Step 3b 选定]
+    E2 --> F1[Step 4 假设提炼]
+    F1 -->|🛑 #4 假设确认| F2[Step 5 因果识别]
+    F2 --> G1[Step 6 交付]
+    G1 -->|🛑 #5 交付收工| G2[研究计划草稿]
+
+    style A fill:#ff6b6b,color:#fff
+    style C1 fill:#ffd93d
+    style C2 fill:#6bcf7f
+    style D1 fill:#6bcf7f
+    style D2 fill:#6bcf7f
+    style E1 fill:#4d96ff,color:#fff
+    style E2 fill:#4d96ff,color:#fff
+    style F1 fill:#9b59b6,color:#fff
+    style F2 fill:#9b59b6,color:#fff
+    style G1 fill:#95a5a6,color:#fff
+    style G2 fill:#2ecc71,color:#fff
+```
+
+> 详见 [`assets/diagram/pipeline.mermaid`](assets/diagram/pipeline.mermaid) 源文件。
 
 ## 启动说明(新任务首次响应必须发送)
 
