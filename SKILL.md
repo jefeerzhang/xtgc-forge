@@ -204,7 +204,7 @@ Step 6 · 交付物         汇总 + 后续步骤建议
 
 **生成方式**:由 `scripts/init_project.py` 创建空模板,skill 跑 Step 3a 时填入 6 维评分。
 
-## 🚦 刚性闸门
+## 🚦 刚性闸门 + 独立审查
 
 每个 Step 完成后,**必须**通过 `scripts/check_step.py` 校验,才能进入下一步。
 
@@ -218,22 +218,35 @@ python scripts/check_step.py --workdir <你的工作目录> --step 3a
 # 单独校验 topic_scores.json
 python scripts/check_step.py --workdir <你的工作目录> --step scores
 
-# 一次性校验全部(含 topic_scores)
+# 独立审查(scan / topics 阶段必须独立子 agent 跑)
+python scripts/review.py --workdir <dir> --target scan   # 生成 review_scan.md 模板
+python scripts/check_step.py --workdir <dir> --step scan-review  # 校验 verdict
+
+# 一次性校验全部(含 topic_scores + review)
 python scripts/check_step.py --workdir <你的工作目录> --step all
 ```
 
-**校验规则**(每 Step):
-- `Step 1`:含"模糊领域" + "文献清单" 字段
-- `Step 2a`:文献要点卡含"研究问题 + 主要发现"
-- `Step 2b`:文献矩阵含"作者 + 年份 + 方法 + 主要发现" 字段
-- `Step 2c`:Gap 裁定含"证据来源 + 重要性" 字段
-- `Step 3a`:**3 主推 + 2 备选 + topic_scores.json(6 维评分)** ⭐
-- `Step 3b`:选定主题含"研究问题 + 理论贡献 + 研究类型"
-- `Step 4`:≥3 个假设,各含"假设陈述 + DAG + 反事实 + 可证伪 + SESOI"
-- `Step 5`:含"识别策略 + 工具变量 + 稳健性"
-- `Step 6`:含"核心结论 + 后续步骤"
+**校验规则**:
+- `Step 1-6`:每 Step 关键词 + 计数(见 GATES 字典)
+- `Step 3a` 额外校验 `topic_scores.json`(6 维评分 + decision)
+- `Step 2c 后`:生成 `review_scan.md`,由**独立子 agent**(reviewer ≠ producer)填入 PASS / P0_OPEN / FAIL verdict
+- `Step 4 后`:生成 `review_topics.md`,同上独立审查
 
-**FAIL 时**:闸门脚本输出错误信息和修复建议,**禁止跳过**(BLOCKING)。
+### 独立审查机制(v0.2.7)
+
+借鉴 RTS v1.5.2 的强制独立审查分离:
+
+```
+Step 2c 完成 → 生成 review_scan.md 模板(由 scripts/review.py)
+       ↓
+调独立子 agent 填 verdict(reviewer context 必须空,不含产出过程)
+       ↓
+check_step.py --step scan-review 校验 verdict
+       ↓
+PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
+```
+
+**信任边界**(诚实声明):verdict 由独立子 agent 填写,理论上审查者也可伪造。完整闭合需受控 runner 外部登记审查行为,超出本 skill 范围(同 RTS v1.5.2 残留)。
 
 ## 🛑 Checkpoint 详细设计
 
@@ -552,4 +565,5 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 - **v0.2.3**(2026-08-10):**用户交互增强**。
 - **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
 - **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
-- **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。Step 3a 加 6 维评分(借鉴 RTS question_scores);新增 `scripts/init_project.py` 一键创建工作目录 + Step 1-6 模板 + topic_scores.json 框架;check_step.py 加 scores 校验规则。
+- **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。
+- **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。

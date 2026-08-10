@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """
-选题工坊 · 刚性闸门检查脚本 (v0.2.5)
+选题工坊 · 刚性闸门检查脚本 (v0.2.7)
 
 校验每个 Step 产物的完整性、关键字段、最小内容长度。
 失败返回非 0 退出码,提示用户修复。
 
+支持:
+  --step 1/2a/2b/2c/3a/3b/4/5/6      单 Step 校验
+  --step all                         一次性校验全部(含 review)
+  --step scores                      topic_scores.json 单独校验
+  --step scan-review                 review_scan.md 校验
+  --step topics-review               review_topics.md 校验
+
 用法:
-  python scripts/check_step.py --workdir <dir> --step <1|2a|2b|2c|3a|3b|4|5|6|all>
+  python scripts/check_step.py --workdir <dir> --step <step>
 """
 
 import argparse
@@ -49,7 +56,7 @@ GATES = {
         "min_count": {
             "主推": 3,
             "备选": 2,
-            "研究类型": 5  # 3 主推 + 2 备选
+            "研究类型": 5
         },
         "fail_msg": "Step 3a: 候选主题格式不对。需要 3 主推 + 2 备选,各含理论贡献 + 方法可行性 + 研究类型"
     },
@@ -83,8 +90,11 @@ GATES = {
 }
 
 
-# topic_scores.json 特殊校验(Step 3a 必跑)
+# topic_scores.json 校验键
 SCORE_KEYS = ["importance", "feasibility", "falsifiability", "evidence_leverage", "originality", "negative_value"]
+
+# 所有合法 step 名称
+VALID_STEPS = list(GATES.keys()) + ["all", "scores", "scan-review", "topics-review"]
 
 
 def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
@@ -107,15 +117,11 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
     if len(candidates) != 5:
         return (False, [f"candidates 长度 {len(candidates)} ≠ 5(应 3 主推 + 2 备选)"])
 
-    # 校验 decision 计数
     selected_count = sum(1 for c in candidates if c.get("decision") == "selected")
-    parked_count = sum(1 for c in candidates if c.get("decision") == "parked")
-    dropped_count = sum(1 for c in candidates if c.get("decision") == "dropped")
 
     if selected_count != 3:
         errors.append(f"decision='selected' 的候选数 {selected_count} ≠ 3(应 3 主推)")
 
-    # 校验每个 candidate
     for i, c in enumerate(candidates):
         prefix = f"候选 #{i+1} ({c.get('label', '?')})"
 
@@ -128,7 +134,7 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
             if key not in scores:
                 errors.append(f"{prefix}: 缺少评分 '{key}'")
             elif not isinstance(scores[key], int):
-                errors.append(f"{prefix}: 评分 '{key}' 不是整数({type(scores[key]).__name__})")
+                errors.append(f"{prefix}: 评分 '{key}' 不是整数")
             elif not (1 <= scores[key] <= 5):
                 errors.append(f"{prefix}: 评分 '{key}'={scores[key]} 不在 1-5 范围")
 
@@ -143,60 +149,97 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
+def check_review(workdir: Path, target: str) -> tuple[bool, list[str]]:
+    """校验 review_{target}.md 是否 PASS。"""
+    errors = []
+    review_file = workdir / f"review_{target}.md"
+
+    if not review_file.exists():
+        return (False, [f"review_{target}.md 不存在,请用 scripts/review.py 生成模板,由独立子 agent 填入 verdict"])
+
+    content = review_file.read_text(encoding="utf-8")
+
+    if "verdict" not in content.lower():
+        errors.append("缺少 verdict 字段")
+
+    # 检查 verdict 值
+    has_pass = "verdict:**`PASS`" in content or "verdict:`PASS`" in content or "verdict:PASS" in content or "**verdict**:`PASS`" in content
+    has_p0 = "P0_OPEN" in content or "P0-OPEN" in content
+
+    if not has_pass and not has_p0:
+        errors.append("verdict 字段未填写 PASS / P0_OPEN / FAIL")
+    elif has_p0:
+        if "P0-1" not in content and "P0-2" not in content:
+            errors.append("verdict=P0_OPEN 但未列出具体 P0 问题")
+
+    if "reviewer" not in content.lower():
+        errors.append("缺少审查者 ID(reviewer-<hash>)")
+
+    if "密码学身份保证" not in content and "信任边界" not in content:
+        errors.append("缺少信任边界声明")
+
+    return (len(errors) == 0, errors)
+
+
 def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
     """
     检查单个 step 的产物完整性。
     返回 (passed, errors)。
     """
+    workdir_path = Path(workdir)
+
+    # 特殊 step 处理
     if step == "all":
         all_errors = []
         for s in ["1", "2a", "2b", "2c", "3a", "3b", "4", "5", "6"]:
             passed, errors = check_step(workdir, s)
             if not passed:
                 all_errors.extend(errors)
-        # 同时校验 topic_scores.json
-        ts_passed, ts_errors = check_topic_scores(Path(workdir))
+        ts_passed, ts_errors = check_topic_scores(workdir_path)
         if not ts_passed:
             all_errors.extend([f"[topic_scores.json] {e}" for e in ts_errors])
+        for rt in ["scan", "topics"]:
+            r_passed, r_errors = check_review(workdir_path, rt)
+            if not r_passed:
+                all_errors.extend([f"[review_{rt}.md] {e}" for e in r_errors])
         return (len(all_errors) == 0, all_errors)
 
     if step == "scores":
-        return check_topic_scores(Path(workdir))
+        return check_topic_scores(workdir_path)
+
+    if step == "scan-review":
+        return check_review(workdir_path, "scan")
+
+    if step == "topics-review":
+        return check_review(workdir_path, "topics")
 
     if step not in GATES:
-        return (False, [f"未知 step: {step}。合法 step: 1, 2a, 2b, 2c, 3a, 3b, 4, 5, 6, all, scores"])
+        return (False, [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"])
 
     rule = GATES[step]
-    workdir_path = Path(workdir)
     file_path = workdir_path / rule["file"]
 
     errors = []
 
-    # 检查文件存在
     if not file_path.exists():
         return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}"])
 
-    # 读取内容
     content = file_path.read_text(encoding="utf-8")
     lines = content.splitlines()
 
-    # 检查行数
     if len(lines) < rule["min_lines"]:
         errors.append(f"{rule['fail_msg']}\n  文件行数 {len(lines)} < 最小要求 {rule['min_lines']}")
 
-    # 检查关键词
     for kw in rule["required_keywords"]:
         if kw not in content:
             errors.append(f"缺少关键词: '{kw}'")
 
-    # 检查最小计数(如"主推 ≥ 3")
     if "min_count" in rule:
         for kw, min_n in rule["min_count"].items():
             count = content.count(kw)
             if count < min_n:
                 errors.append(f"'{kw}' 出现 {count} 次,要求 ≥ {min_n} 次")
 
-    # Step 3a 额外校验 topic_scores.json
     if step == "3a":
         ts_passed, ts_errors = check_topic_scores(workdir_path)
         if not ts_passed:
@@ -206,59 +249,10 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
-def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
-    """
-    检查单个 step 的产物完整性。
-    返回 (passed, errors)。
-    """
-    if step == "all":
-        # 全部检查
-        all_errors = []
-        for s in ["1", "2a", "2b", "2c", "3a", "3b", "4", "5", "6"]:
-            passed, errors = check_step(workdir, s)
-            if not passed:
-                all_errors.extend(errors)
-        return (len(all_errors) == 0, all_errors)
-
-    if step not in GATES:
-        return (False, [f"未知 step: {step}。合法 step: 1, 2a, 2b, 2c, 3a, 3b, 4, 5, 6, all"])
-
-    rule = GATES[step]
-    file_path = Path(workdir) / rule["file"]
-
-    errors = []
-
-    # 检查文件存在
-    if not file_path.exists():
-        return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}"])
-
-    # 读取内容
-    content = file_path.read_text(encoding="utf-8")
-    lines = content.splitlines()
-
-    # 检查行数
-    if len(lines) < rule["min_lines"]:
-        errors.append(f"{rule['fail_msg']}\n  文件行数 {len(lines)} < 最小要求 {rule['min_lines']}")
-
-    # 检查关键词
-    for kw in rule["required_keywords"]:
-        if kw not in content:
-            errors.append(f"缺少关键词: '{kw}'")
-
-    # 检查最小计数(如"主推 ≥ 3")
-    if "min_count" in rule:
-        for kw, min_n in rule["min_count"].items():
-            count = content.count(kw)
-            if count < min_n:
-                errors.append(f"'{kw}' 出现 {count} 次,要求 ≥ {min_n} 次")
-
-    return (len(errors) == 0, errors)
-
-
 def main():
     parser = argparse.ArgumentParser(description="选题工坊 · 刚性闸门检查")
     parser.add_argument("--workdir", "-w", required=True, help="工作目录(产出文件所在)")
-    parser.add_argument("--step", "-s", required=True, help="Step 编号: 1, 2a, 2b, 2c, 3a, 3b, 4, 5, 6, all")
+    parser.add_argument("--step", "-s", required=True, help=f"Step 编号:{', '.join(VALID_STEPS)}")
     args = parser.parse_args()
 
     if not os.path.isdir(args.workdir):
