@@ -635,12 +635,30 @@ done
 - [x] 跑 1 个真实社科选题实测,记录每步产出
 - [x] 加 `test-prompts.json`,放 2-3 个测试 prompt(v0.2.8: full-pipeline / 文献不足 / 出gap)
 - [x] example 补输入端材料(v0.2.8: inputs/00_任务元信息 + literature-list; Step1 与气候案例对齐)
-- [ ] 写 1 篇 README 的"30 秒看明白"展示图
+- [x] 写 1 篇 README 的"30 秒看明白"展示图(v0.3.0:ASCII 流程图 + 6 个徽章 + 触发词云)
+- [x] 加 CHANGELOG.md(v0.3.0:为什么改叙事)
+- [x] 加 mermaid 流水线图(v0.3.0: assets/diagram/pipeline.mermaid)
+- [x] 加 mermaid 5 闸时序图(v0.3.0: assets/diagram/checkpoint-flow.mermaid)
+- [x] 加同行对比可视化版(v0.3.0: assets/comparison.md,5 直接 + 8 间接)
+- [ ] 加第 2 个跨学科案例(教育/传播/公共管理之一)
+- [ ] 录 30 秒 GIF 展示 5 闸硬暂停(v0.3.0 留待下轮)
 
 ---
 
 ## 版本
 
+- **v0.3.0**(2026-08-10):**精雕 — 从骨架+纪律升级到可视化+传播资产**。SKILL.md frontmatter 触发词 19 条 + 顶部 mermaid 流程图;README 首屏 6 个徽章 + ASCII 流程图 + 5 闸硬暂停表格 + 触发词云;新增 `CHANGELOG.md` / `assets/diagram/` / `assets/comparison.md`。**逻辑骨架未动**(v0.2.9 的 5 闸硬暂停保留)。
+- **v0.2.9**(2026-08-10):**强制 5 次 Checkpoint 硬暂停**。#1–#5 全部硬暂停;禁止代选/合并跳过/用 check_step 代替用户确认;修正 Step3/4 闸门编号。
+- **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
+- **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。
+- **v0.2.7**(2026-08-10):**安装链路修复 + 命令语法 + 版本统一**(鲁班方案 A)。check-ready.sh 去私有路径;slash 入口改为合法语法;依赖安装引导入 README。
+- **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。6 维评分 + decision 字段。
+- **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
+- **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
+- **v0.2.3**(2026-08-10):**用户交互增强**。
+- **v0.2.2**(2026-08-10):**实测驱动修复 + UX 修复**。
+- **v0.2.1**(2026-08-10):**UX 修复**。
+- **v0.2.0**(2026-08-10):**应用 8 个边界拷问决策**。砍 Step 6,拆为模块化命令,加 gap 派生规则。
 - **v0.1.0**(2026-08-10):初稿。7 步流水线骨架。
 - **v0.2.0**(2026-08-10):应用 8 个边界拷问决策。
 - **v0.2.1**(2026-08-10):**UX 修复**。
