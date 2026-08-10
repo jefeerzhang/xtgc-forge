@@ -8,11 +8,11 @@ description: |
   适用于:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
   触发词:选题工坊、文献综述、提炼主题、从文献找主题、研究假设、文献驱动的选题、
   research question from literature、lit-driven、hypothesis from review、选题框架。
-version: "0.2.0"
+version: "0.2.7"
 license: MIT
 ---
 
-# 选题工坊 v0.2.3
+# 选题工坊 v0.2.7
 
 ## 启动说明(新任务首次响应必须发送)
 
@@ -124,10 +124,13 @@ license: MIT
 
 ## 命令入口(模块化)
 
+Claude Code 的 skill 只有一个 slash 入口:`/选题工坊`。进入后用**自然语言子命令**驱动各模块。
+
 ### 默认入口:全流程
 
 ```
-/选题工坊/跑全部
+/选题工坊
+然后对 Claude 说:跑全部
 ```
 
 **入口行为**:
@@ -140,14 +143,16 @@ license: MIT
 
 ### 子模块独立调用(高级用户)
 
-| 命令 | 对应步骤 | 作用 |
+进入 `/选题工坊` 后,对 Claude 说以下任一说法:
+
+| 说法 | 对应步骤 | 作用 |
 |---|---|---|
-| `/选题工坊/读文献` | Step 2a | PDF 提要点(无 PDF 跳过)|
-| `/选题工坊/建矩阵` | Step 2b | 结构化文献矩阵 |
-| `/选题工坊/出gap` | Step 2c | gap 裁定 |
-| `/选题工坊/出主题` | Step 3 | 涌现候选主题 + 用户选 |
-| `/选题工坊/出假设` | Step 4 | 提炼研究假设 + 用户确认 |
-| `/选题工坊/识别策略` | Step 5 | 因果识别(自动检测研究类型后启用/跳过)|
+| "读文献" | Step 2a | PDF 提要点(无 PDF 跳过)|
+| "建矩阵" | Step 2b | 结构化文献矩阵 |
+| "出gap" | Step 2c | gap 裁定 |
+| "出主题" | Step 3 | 涌现候选主题 + 用户选 |
+| "出假设" | Step 4 | 提炼研究假设 + 用户确认 |
+| "识别策略" | Step 5 | 因果识别(自动检测研究类型后启用/跳过)|
 
 子模块默认读取工作目录里的中间产出文件。如果中间文件不存在,提示用户先跑前置模块。
 
@@ -327,12 +332,12 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ### 动作 1 · 引导用户上传文献
 
-**主调用方**(`/选题工坊/跑全部` 入口):
+**主调用方**(`/选题工坊` + "跑全部" 入口):
 - 第一句话:"📥 请先上传你的文献(5-50 篇 PDF 或引用列表)"
 - 如果用户没准备:引导用户去读 5-10 篇近 3 年综述(给关键词检索式建议,但不自动检索)
 - 如果用户已上传:继续到动作 2
 
-**子调用方**(`/选题工坊/建矩阵` 等子模块):
+**子调用方**("建矩阵" 等子模块):
 - 检查工作目录是否已有文献文件,没有就报错"请先上传文献"
 
 ### 动作 2 · 校验文献质量
@@ -506,10 +511,22 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ## 协议与依赖
 
 - **协议**:MIT(可商用)
-- **依赖 skill**(均 MIT,来自 `claude-academic-skills` 仓库 Nero1688):
+- **依赖 skill**(均 MIT,来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)):
   - `bilingual-paper-reader` — Step 2a 读 PDF
   - `literature-matrix-builder` — Step 2b 建矩阵
   - `causal-inference-architect` — Step 5 因果识别
+  - `research-method-selector` — check-ready.sh 环境检查
+
+**依赖安装**(首次使用必做,否则 Step 2/5 会卡):
+
+```bash
+git clone --depth 1 https://github.com/Nero1688/claude-academic-skills.git /tmp/cas
+for s in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector; do
+  cp -r "/tmp/cas/skills/$s" ~/.claude/skills/
+done
+# 验证:bash check-ready.sh
+```
+
 - **不依赖**:`open-science-skills`(因 CC BY-NC 4.0 非商用冲突)
 - **本 skill 自写的步骤**:Step 2c(gap裁定)/ Step 3(主题涌现)/ Step 4(假设提炼)
   - 基于公开学术标准(参见 `references/methodology-sources.md`)
@@ -535,23 +552,29 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ```
 选题工坊/
 ├── SKILL.md                              本文件
+├── README.md                             安装 + 触发示例
+├── LICENSE                               MIT
 ├── references/
 │   └── methodology-sources.md            方法论参考来源(参见用)
-├── examples/                             (TODO) 跑通的完整例子
-├── test-prompts.json                     (TODO) 测试 prompt
-├── README.md                             (TODO) 安装 + 触发示例
-└── LICENSE                               (TODO) MIT 协议文件
+├── examples/
+│   └── 气候风险对企业绿色转型/            完整跑通案例(9 产出 + 2 审查 verdict + topic_scores)
+├── scripts/
+│   ├── init_project.py                   初始化工作目录(生成 11 个模板)
+│   ├── check_step.py                     刚性闸门校验
+│   └── review.py                         独立审查模板生成
+└── check-ready.sh                        就绪检查(环境 + 依赖 + 文献目录)
 ```
 
 ---
 
 ## TODO(后续迭代)
 
-- [ ] 加 `examples/` 子目录,放 1 个完整跑通的例子
+- [x] 加 `examples/` 子目录,放 1 个完整跑通的例子(v0.2.7 已有:气候风险对企业绿色转型)
+- [x] 加 `README.md`,讲清安装和触发示例
+- [x] 加 `LICENSE` 文件(MIT)
+- [x] 跑 1 个真实社科选题实测,记录每步产出
 - [ ] 加 `test-prompts.json`,放 2-3 个测试 prompt
-- [ ] 加 `README.md`,讲清安装和触发示例
-- [ ] 加 `LICENSE` 文件(MIT)
-- [ ] 跑 1 个真实社科选题实测,记录每步产出
+- [ ] example 补输入端材料(文献清单原文),让复现者可对账
 - [ ] 写 1 篇 README 的"30 秒看明白"展示图
 
 ---
@@ -566,4 +589,5 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 - **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
 - **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
 - **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。
+- **v0.2.7**(2026-08-10):**独立审查分离 + 安装链路修复**。review.py 独立审查模板;check-ready.sh 去私有路径;命令入口改为合法 slash 语法;依赖安装引导入 README。
 - **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。

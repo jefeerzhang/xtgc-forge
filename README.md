@@ -26,24 +26,35 @@
 ## 🚀 快速开始
 
 ```bash
-# 安装到 Claude Code 全局
+# 1. 装选题工坊本体
+git clone --depth 1 https://github.com/jefeerzhang/xtgc-forge.git
+cd xtgc-forge
 mkdir -p ~/.claude/skills/选题工坊
 cp SKILL.md ~/.claude/skills/选题工坊/SKILL.md
-cp -r references/ ~/.claude/skills/选题工坊/
+cp -r references/ scripts/ ~/.claude/skills/选题工坊/
 
-# 在 Claude Code 中调用
-/选题工坊/跑全部
+# 2. 装依赖子 skill(首次必装,否则 Step 2/5 会卡)
+git clone --depth 1 https://github.com/Nero1688/claude-academic-skills.git /tmp/cas
+for s in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector; do
+  cp -r "/tmp/cas/skills/$s" ~/.claude/skills/
+done
+
+# 3. 就绪检查(可选传 PDF 目录做完整检查)
+bash check-ready.sh
+
+# 4. 在 Claude Code 中调用
+#    输入 /选题工坊,然后对 Claude 说:跑全部
 ```
 
 或者**直接给 Claude 说**:"我要用选题工坊,我有一些 PDF 在 X 目录下,主题是 X"。
 
 ## 🎬 触发示例
 
-- "用选题工坊帮我做选题,我有 8 篇 PDF 在 Downloads/我的文献,主题是数字化转型对企业创新"
-- "/选题工坊/建矩阵"
-- "/选题工坊/出gap"
-- "/选题工坊/出主题"
-- "/选题工坊/出假设"
+- "/选题工坊" + "跑全部,我有 8 篇 PDF 在 Downloads/我的文献,主题是数字化转型对企业创新"
+- "/选题工坊" + "建矩阵"
+- "/选题工坊" + "出gap"
+- "/选题工坊" + "出主题"
+- "/选题工坊" + "出假设"
 - "我从 PDF 文献里看研究主题"
 
 ## 📋 输入要求
@@ -135,6 +146,9 @@ MIT(可商用、可改编)。
 - **v0.2.0**:应用 8 个边界拷问决策。砍 Step 6,拆为模块化命令,加 gap 派生规则。
 - **v0.2.1**:UX 修复。加"使用前必读"段,Step 1 引导用户上传文献。
 - **v0.2.2**:实测驱动修复。Step 2a 改为"Read 直接读,读不出的舍弃"——不做 OCR,降低门槛。
+- **v0.2.3-v0.2.5**:Checkpoint + Grill 追问;3 主推 + 2 备选;刚性闸门。
+- **v0.2.6**:topic_scores.json 6 维评分 + init_project.py 一键初始化。
+- **v0.2.7**:独立审查分离(review.py);安装链路修复——check-ready.sh 去私有路径、命令入口改合法 slash 语法、依赖安装引导入快速开始。
 
 ## 🙏 致谢
 
