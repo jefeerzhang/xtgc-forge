@@ -169,7 +169,7 @@ Step 5 · 因果识别       自动检测研究类型,推断性研究才启用
 Step 6 · 交付物         汇总 + 后续步骤建议
 ```
 
-## 🎯 Step 3a 输出格式:3 主推 + 2 备选
+## 🎯 Step 3a 输出格式:3 主推 + 2 备选 + topic_scores.json
 
 **3 主推**:从 gap 派生的高价值选题,每个含:
 - 来源 Gap
@@ -187,17 +187,38 @@ Step 6 · 交付物         汇总 + 后续步骤建议
 - 降级场景(主推不可行时启动)
 - 研究类型标签
 
-**用户决策**:默认选 1 个主推;若主推数据 / 方法不可行,降级到备选(并说明原因)。
+**topic_scores.json** — 6 维评分(RTS 风格):
+
+| 维度 | 含义 |
+|---|---|
+| **importance** | 理论 + 实践价值(1-5) |
+| **feasibility** | 数据 + 方法可获取性(1-5) |
+| **falsifiability** | 能否被推翻(1-5) |
+| **evidence_leverage** | 现有文献能支撑多少(1-5) |
+| **originality** | 与已有研究的差异度(1-5) |
+| **negative_value** | 被推翻后学界仍感兴趣(1-5) |
+
+每个 candidate 的 `decision` 字段:`selected`(主推)/ `parked`(备选)/ `dropped`(淘汰)。`dropped` 必须填 `kill_rule`。
+
+**用户决策**:看 topic_scores.json 的 `total` 分数,选最高的;若主推数据 / 方法不可行,降级到备选(并说明原因)。
+
+**生成方式**:由 `scripts/init_project.py` 创建空模板,skill 跑 Step 3a 时填入 6 维评分。
 
 ## 🚦 刚性闸门
 
 每个 Step 完成后,**必须**通过 `scripts/check_step.py` 校验,才能进入下一步。
 
 ```bash
+# 初始化项目目录(可选但推荐)
+python scripts/init_project.py --workdir <dir> --name "<主题>" --branch "推断性"
+
 # 校验单个 Step
 python scripts/check_step.py --workdir <你的工作目录> --step 3a
 
-# 一次性校验全部
+# 单独校验 topic_scores.json
+python scripts/check_step.py --workdir <你的工作目录> --step scores
+
+# 一次性校验全部(含 topic_scores)
 python scripts/check_step.py --workdir <你的工作目录> --step all
 ```
 
@@ -206,7 +227,7 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 - `Step 2a`:文献要点卡含"研究问题 + 主要发现"
 - `Step 2b`:文献矩阵含"作者 + 年份 + 方法 + 主要发现" 字段
 - `Step 2c`:Gap 裁定含"证据来源 + 重要性" 字段
-- `Step 3a`:**3 主推 + 2 备选,各含"理论贡献 + 方法可行性 + 研究类型"** ⭐
+- `Step 3a`:**3 主推 + 2 备选 + topic_scores.json(6 维评分)** ⭐
 - `Step 3b`:选定主题含"研究问题 + 理论贡献 + 研究类型"
 - `Step 4`:≥3 个假设,各含"假设陈述 + DAG + 反事实 + 可证伪 + SESOI"
 - `Step 5`:含"识别策略 + 工具变量 + 稳健性"
@@ -525,9 +546,10 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 ## 版本
 
 - **v0.1.0**(2026-08-10):初稿。7 步流水线骨架。
-- **v0.2.0**(2026-08-10):应用 8 个边界拷问决策。砍 Step 6,拆为模块化命令,加 gap 派生规则,加研究类型自动检测,加 references/ 子目录。
-- **v0.2.1**(2026-08-10):**UX 修复**。加"🎯 使用前必读"段。
-- **v0.2.2**(2026-08-10):**实测驱动修复**。Step 2a 改为"Read 直接读"。
-- **v0.2.3**(2026-08-10):**用户交互增强**。加启动说明 + 三问启动。
-- **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。5 个 checkpoint,Grill 机制细节化。
-- **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。Step 3a 改为"3 主推 + 2 备选"输出格式(借鉴 RTS);新增 `scripts/check_step.py`,每个 Step 完成后必须通过校验才能继续,校验失败则 BLOCKING。
+- **v0.2.0**(2026-08-10):应用 8 个边界拷问决策。
+- **v0.2.1**(2026-08-10):**UX 修复**。
+- **v0.2.2**(2026-08-10):**实测驱动修复**。
+- **v0.2.3**(2026-08-10):**用户交互增强**。
+- **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
+- **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
+- **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。Step 3a 加 6 维评分(借鉴 RTS question_scores);新增 `scripts/init_project.py` 一键创建工作目录 + Step 1-6 模板 + topic_scores.json 框架;check_step.py 加 scores 校验规则。

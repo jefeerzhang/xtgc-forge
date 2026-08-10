@@ -1,0 +1,109 @@
+{
+  "step": "3a",
+  "created_at": "2026-08-10",
+  "rubric": {
+    "importance": "理论 + 实践价值(1-5)",
+    "feasibility": "数据 + 方法可获取性(1-5)",
+    "falsifiability": "能否被推翻(1-5)",
+    "evidence_leverage": "现有文献能支撑多少(1-5)",
+    "originality": "与已有研究的差异度(1-5)",
+    "negative_value": "被推翻后学界仍感兴趣(1-5)"
+  },
+  "candidates": [
+    {
+      "id": "Q1",
+      "label": "主推1",
+      "title": "气候风险背景下数字化转型对企业避税的影响",
+      "source_gap": "GAP-B1 + GAP-B3",
+      "research_type": "推断性",
+      "scores": {
+        "importance": 5,
+        "feasibility": 4,
+        "falsifiability": 5,
+        "evidence_leverage": 4,
+        "originality": 5,
+        "negative_value": 3
+      },
+      "total": 26,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q2",
+      "label": "主推2",
+      "title": "气候风险对企业绿色转型的影响 — 基于 A 股上市公司的实证",
+      "source_gap": "GAP-B2",
+      "research_type": "推断性",
+      "scores": {
+        "importance": 5,
+        "feasibility": 5,
+        "falsifiability": 5,
+        "evidence_leverage": 5,
+        "originality": 4,
+        "negative_value": 4
+      },
+      "total": 28,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q3",
+      "label": "主推3",
+      "title": "数字化转型能否降低企业气候风险敞口",
+      "source_gap": "GAP-B4",
+      "research_type": "推断性",
+      "scores": {
+        "importance": 4,
+        "feasibility": 4,
+        "falsifiability": 5,
+        "evidence_leverage": 4,
+        "originality": 5,
+        "negative_value": 3
+      },
+      "total": 25,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q4",
+      "label": "备选1",
+      "title": "气候风险对不同类型 FDI 的差异影响",
+      "source_gap": "GAP-C1",
+      "research_type": "推断性",
+      "scores": {
+        "importance": 3,
+        "feasibility": 3,
+        "falsifiability": 4,
+        "evidence_leverage": 3,
+        "originality": 3,
+        "negative_value": 2
+      },
+      "total": 18,
+      "max_total": 30,
+      "decision": "parked",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q5",
+      "label": "备选2",
+      "title": "气候风险对组织 / 战略调整的影响(质性)",
+      "source_gap": "GAP-T2",
+      "research_type": "质性",
+      "scores": {
+        "importance": 3,
+        "feasibility": 2,
+        "falsifiability": 2,
+        "evidence_leverage": 2,
+        "originality": 4,
+        "negative_value": 2
+      },
+      "total": 15,
+      "max_total": 30,
+      "decision": "parked",
+      "kill_rule": ""
+    }
+  ]
+}

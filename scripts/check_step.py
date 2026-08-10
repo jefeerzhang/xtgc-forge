@@ -10,6 +10,7 @@
 """
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -80,6 +81,129 @@ GATES = {
         "fail_msg": "Step 6: 总结文件缺少'核心结论'或'后续步骤'字段"
     }
 }
+
+
+# topic_scores.json 特殊校验(Step 3a 必跑)
+SCORE_KEYS = ["importance", "feasibility", "falsifiability", "evidence_leverage", "originality", "negative_value"]
+
+
+def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
+    """校验 topic_scores.json。"""
+    errors = []
+    score_file = workdir / "topic_scores.json"
+
+    if not score_file.exists():
+        return (False, ["topic_scores.json 不存在,请用 init_project.py 创建或手动生成"])
+
+    try:
+        data = json.loads(score_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
+
+    if "candidates" not in data:
+        return (False, ["topic_scores.json 缺少 'candidates' 字段"])
+
+    candidates = data["candidates"]
+    if len(candidates) != 5:
+        return (False, [f"candidates 长度 {len(candidates)} ≠ 5(应 3 主推 + 2 备选)"])
+
+    # 校验 decision 计数
+    selected_count = sum(1 for c in candidates if c.get("decision") == "selected")
+    parked_count = sum(1 for c in candidates if c.get("decision") == "parked")
+    dropped_count = sum(1 for c in candidates if c.get("decision") == "dropped")
+
+    if selected_count != 3:
+        errors.append(f"decision='selected' 的候选数 {selected_count} ≠ 3(应 3 主推)")
+
+    # 校验每个 candidate
+    for i, c in enumerate(candidates):
+        prefix = f"候选 #{i+1} ({c.get('label', '?')})"
+
+        if "scores" not in c:
+            errors.append(f"{prefix}: 缺少 'scores' 字段")
+            continue
+
+        scores = c["scores"]
+        for key in SCORE_KEYS:
+            if key not in scores:
+                errors.append(f"{prefix}: 缺少评分 '{key}'")
+            elif not isinstance(scores[key], int):
+                errors.append(f"{prefix}: 评分 '{key}' 不是整数({type(scores[key]).__name__})")
+            elif not (1 <= scores[key] <= 5):
+                errors.append(f"{prefix}: 评分 '{key}'={scores[key]} 不在 1-5 范围")
+
+        if "decision" not in c:
+            errors.append(f"{prefix}: 缺少 'decision' 字段")
+        elif c["decision"] == "dropped" and not c.get("kill_rule"):
+            errors.append(f"{prefix}: decision='dropped' 必须填 'kill_rule'")
+
+        if "research_type" not in c:
+            errors.append(f"{prefix}: 缺少 'research_type' 字段")
+
+    return (len(errors) == 0, errors)
+
+
+def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
+    """
+    检查单个 step 的产物完整性。
+    返回 (passed, errors)。
+    """
+    if step == "all":
+        all_errors = []
+        for s in ["1", "2a", "2b", "2c", "3a", "3b", "4", "5", "6"]:
+            passed, errors = check_step(workdir, s)
+            if not passed:
+                all_errors.extend(errors)
+        # 同时校验 topic_scores.json
+        ts_passed, ts_errors = check_topic_scores(Path(workdir))
+        if not ts_passed:
+            all_errors.extend([f"[topic_scores.json] {e}" for e in ts_errors])
+        return (len(all_errors) == 0, all_errors)
+
+    if step == "scores":
+        return check_topic_scores(Path(workdir))
+
+    if step not in GATES:
+        return (False, [f"未知 step: {step}。合法 step: 1, 2a, 2b, 2c, 3a, 3b, 4, 5, 6, all, scores"])
+
+    rule = GATES[step]
+    workdir_path = Path(workdir)
+    file_path = workdir_path / rule["file"]
+
+    errors = []
+
+    # 检查文件存在
+    if not file_path.exists():
+        return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}"])
+
+    # 读取内容
+    content = file_path.read_text(encoding="utf-8")
+    lines = content.splitlines()
+
+    # 检查行数
+    if len(lines) < rule["min_lines"]:
+        errors.append(f"{rule['fail_msg']}\n  文件行数 {len(lines)} < 最小要求 {rule['min_lines']}")
+
+    # 检查关键词
+    for kw in rule["required_keywords"]:
+        if kw not in content:
+            errors.append(f"缺少关键词: '{kw}'")
+
+    # 检查最小计数(如"主推 ≥ 3")
+    if "min_count" in rule:
+        for kw, min_n in rule["min_count"].items():
+            count = content.count(kw)
+            if count < min_n:
+                errors.append(f"'{kw}' 出现 {count} 次,要求 ≥ {min_n} 次")
+
+    # Step 3a 额外校验 topic_scores.json
+    if step == "3a":
+        ts_passed, ts_errors = check_topic_scores(workdir_path)
+        if not ts_passed:
+            errors.append("--- topic_scores.json 校验失败 ---")
+            errors.extend(ts_errors)
+
+    return (len(errors) == 0, errors)
 
 
 def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
