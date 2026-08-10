@@ -1,0 +1,52 @@
+%% 选题工坊 · 5 闸硬暂停时序图
+%% 展示 Agent 与用户在 5 个 Checkpoint 上的交互纪律
+
+sequenceDiagram
+    participant U as 用户
+    participant A as Agent
+    participant S as check_step.py
+    participant V as 独立审查 verdict
+
+    Note over A: Phase 0 三问<br/>BLOCKING(信息不齐时)
+    A->>U: 三问启动(方向/时间/材料)
+    U-->>A: 回答
+
+    rect rgb(255, 217, 61)
+    Note over A,S: Step 1 后 · Checkpoint #1 · 文献确认
+    A->>S: check_step --step 1
+    S-->>A: PASS / FAIL
+    A->>U: 「文献清单 + 模糊领域,确认无误吗?」
+    U-->>A: 「文献确认」(必须)
+    end
+
+    rect rgb(107, 207, 127)
+    Note over A,S: Step 2b 后 · Checkpoint #2 · 矩阵审阅
+    A->>S: check_step --step 2b
+    S-->>A: PASS / FAIL
+    A->>U: 「矩阵关键发现 + 覆盖度,确认吗?」
+    U-->>A: 「矩阵确认」(必须)
+    end
+
+    rect rgb(77, 150, 255)
+    Note over A,V: Step 3a 后 · Checkpoint #3 · 主题选择
+    A->>V: review.py --target scan
+    V-->>A: verdict(scan)
+    A->>U: 「3 主推 + 2 备选,请点名选 1 个」
+    U-->>A: 「选候选 X」(必须点名,不能笼统)
+    end
+
+    rect rgb(155, 89, 182)
+    Note over A,V: Step 4 后 · Checkpoint #4 · 假设确认
+    A->>V: review.py --target topics
+    V-->>A: verdict(topics)
+    A->>U: 「5 个假设 DAG/SESOI,逐条确认?」
+    U-->>A: 「假设确认」或逐条意见(必须)
+    end
+
+    rect rgb(149, 165, 166)
+    Note over A,U: Step 6 后 · Checkpoint #5 · 交付收工
+    A->>U: 「9 个产出文件清单 + 后续步骤」
+    U-->>A: 「交付收工」或下一步(必须)
+    end
+
+    Note over A: 硬规则:Agent 不得代选 / 不得合并跳过 /<br/>check_step PASS ≠ 用户已确认

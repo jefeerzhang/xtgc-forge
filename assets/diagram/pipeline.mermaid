@@ -1,0 +1,27 @@
+%% 选题工坊 · 6 步流水线 + 5 闸硬暂停 流程图
+%% 来源:本图作为 SKILL.md 顶部嵌入图的源文件,GitHub 内置 mermaid 渲染。
+%% 本地转 PNG:npx @mermaid-js/mermaid-cli -i pipeline.mermaid -o pipeline.png
+
+flowchart TD
+    A[Phase 0 三问启动<br/>BLOCKING 信息不齐] -->|回答齐| C1[Step 1 文献上传]
+    C1 -->|🛑 #1 文献确认| C2[Step 2a 读 PDF]
+    C2 --> D1[Step 2b 建矩阵]
+    D1 -->|🛑 #2 矩阵审阅| D2[Step 2c Gap 裁定]
+    D2 --> E1[Step 3a 候选主题]
+    E1 -->|🛑 #3 主题选择<br/>必须点名| E2[Step 3b 选定]
+    E2 --> F1[Step 4 假设提炼<br/>DAG + 反事实 + SESOI]
+    F1 -->|🛑 #4 假设确认| F2[Step 5 因果识别]
+    F2 --> G1[Step 6 交付]
+    G1 -->|🛑 #5 交付收工| G2[研究计划草稿<br/>+ 后续步骤建议]
+
+    style A fill:#ff6b6b,color:#fff,stroke:#c0392b
+    style C1 fill:#ffd93d,stroke:#f39c12
+    style C2 fill:#6bcf7f,stroke:#27ae60
+    style D1 fill:#6bcf7f,stroke:#27ae60
+    style D2 fill:#6bcf7f,stroke:#27ae60
+    style E1 fill:#4d96ff,color:#fff,stroke:#2980b9
+    style E2 fill:#4d96ff,color:#fff,stroke:#2980b9
+    style F1 fill:#9b59b6,color:#fff,stroke:#8e44ad
+    style F2 fill:#9b59b6,color:#fff,stroke:#8e44ad
+    style G1 fill:#95a5a6,color:#fff,stroke:#7f8c8d
+    style G2 fill:#2ecc71,color:#fff,stroke:#27ae60
