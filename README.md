@@ -1,14 +1,51 @@
 # 选题工坊
 
-> **社科/人文向的"用户文献 → 综述 → 主题 → 假设"流水线工具**。基于你自己准备的高质量文献,提炼可检验的研究主题与研究假设。不调用任何自动文献检索(不抓 WebSearch / arXiv / PubMed / Semantic Scholar)。
+> **社科人文向的"文献 → 选题 + 假设"流程纪律产品**。
+> 不替你检索,不替你思考,但强制你在 5 个关键决策点停下来确认、留痕、出 verdict。
 
-## 🎯 你什么时候需要它?
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
+[![Independent Review: 2 verdicts](https://img.shields.io/badge/Independent%20Review-2%20verdicts-blue)](SKILL.md#-刚性闸门--独立审查)
+[![Examples: 1 domain](https://img.shields.io/badge/Examples-1%20domain-green)](examples/)
+[![Test Prompts: 3](https://img.shields.io/badge/Test%20Prompts-3-orange)](test-prompts.json)
+[![Runtime: Claude Code](https://img.shields.io/badge/Runtime-Claude%20Code-blueviolet)](check-ready.sh)
 
-- **硕士/博士生开题**:导师说"自己找方向",你需要从一堆文献里看出能写什么
-- **青年学者跨方向**:换了研究领域,文献已读但,不知道怎么找 gap
-- **实证经济 / 金融 / 管理论文**:需要从文献综述自然涌现研究问题 + 因果识别策略
-- **社科工作论文打磨**:已经有一批文献,想系统化识别"还没被研究过"的角度
-- **AI Agent 工具开发方**:你想给最终用户提供"读 PDF → 出选题"的工作流
+## 🎯 你什么时候需要它?(30 秒看明白)
+
+```
+你有 5-50 篇 PDF + 一句话领域
+   ↓
+[ 6 步流水线:读 → 矩阵 → gap → 主题 → 假设 → 识别 ]
+   ↓
+5 个 🛑 硬闸(必须用户点名确认,Agent 不得代选)
+   ↓
+研究计划草稿 + topic_scores.json + 2 个独立审查 verdict
+```
+
+- **硕博开题** — 导师说"自己找方向",5 篇 PDF + 一句话领域就开跑
+- **青年学者跨方向** — 换了领域,文献已读但找不出 gap
+- **实证经管/金融/管理** — 需要从综述自然涌现研究问题 + 因果识别
+- **AI Agent 工具方** — 想给用户"读 PDF → 出选题"的工作流
+- **社科人文工作者** — 教育学 / 传播学 / 公共管理 / 社会学 / 经管类开题与论文打磨
+
+## ⚡ 5 闸硬暂停(本 skill 唯一差异化)
+
+| # | 时机 | 用户最小确认 |
+|---|---|---|
+| **#1** | 文献上传后 | 「文献确认」 |
+| **#2** | 矩阵审阅后 | 「矩阵确认」 |
+| **#3** | 主题涌现后 | **点名选 1 个候选**(如「选候选 2」)|
+| **#4** | 假设提炼后 | 「假设确认」或逐条 |
+| **#5** | 交付完成后 | 「交付收工」或下一步 |
+
+> 硬规则:`check_step.py PASS ≠ 用户已确认`。脚本通过后仍须等用户口头/点选确认。
+> Agent 不得写「若无异议我将默认选 Q1 / 默认假设通过」。
+
+[详细 6 步流水线 →](SKILL.md) · [与同行对比 →](assets/comparison.md) · [图示 →](assets/diagram/)
+
+## 🎬 触发示例
+
+`/选题工坊/跑全部` · "用选题工坊帮我做选题" · "帮我开题" · "我的文献已读但不知道怎么选题" · "从 PDF 出研究主题" · "出 gap" · "出假设" · "出主题" · "建矩阵" · "识别策略" · "research question from literature" · "lit-driven" · "hypothesis from review"
 
 ## ✨ 它会交付什么?
 
