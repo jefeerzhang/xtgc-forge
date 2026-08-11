@@ -1,20 +1,22 @@
 ---
 name: 选题工坊
 description: |
-  社科人文向的"用户文献 → 选题 + 假设"流程纪律产品。
-  输入用户自备的 PDF 文献(5-50 篇)+ 模糊领域,产出 3-5 个候选主题 + 5 个研究假设 + (可选)因果识别策略。
+  社科人文向的"用户文献 → 选题研究计划"流程纪律产品。
+  输入用户自备的 PDF 文献(5-50 篇)+ 模糊领域;过程产出矩阵/gap/候选主题/假设/识别;
+  **用户主交付仅 1 份自洽完整的研究计划报告**:正文六段(题目→为何→意义→假设→依据→怎么做)
+  + 文内附录(文献矩阵/要点/Gap/候选与选定/识别要点);论述须充分,禁止一句话观点。
   强制 5 次 Checkpoint 硬暂停(文献/矩阵/主题/假设/交付)+ 独立审查 verdict(scan / topics)+ topic_scores 6 维评分。
   不调任何自动文献检索(WebSearch / arXiv / PubMed / Semantic Scholar / Sci-Hub)。
   适用:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
   触发词:选题工坊、开题、选题、找 gap、提假设、文献综述、研究假设、
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
-  从 PDF 出选题、文献矩阵、topic score、独立审查、研究计划草稿、选题框架。
-version: "0.3.0"
+  从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
+version: "0.3.3"
 license: MIT
 ---
 
-# 选题工坊 v0.3.0
+# 选题工坊 v0.3.3
 
 ## 📊 流水线一览(图)
 
@@ -29,7 +31,7 @@ flowchart TD
     E2 --> F1[Step 4 假设提炼]
     F1 -->|🛑 #4 假设确认| F2[Step 5 因果识别]
     F2 --> G1[Step 6 交付]
-    G1 -->|🛑 #5 交付收工| G2[研究计划草稿]
+    G1 -->|🛑 #5 交付收工| G2[六段式研究计划报告]
 
     style A fill:#ff6b6b,color:#fff
     style C1 fill:#ffd93d
@@ -60,7 +62,12 @@ flowchart TD
 4. 从 gap 涌现 3-5 个候选主题,你选 1 个;
 5. 我提炼 3-5 个研究假设,你确认;
 6. 如需,我给因果识别策略;
-7. 交付研究计划草稿 + 后续步骤建议。
+7. **交付 1 份自洽完整的研究计划报告**(主产品=正文六段+文内矩阵/Gap 等附录);Step1–5 为过程留痕。
+
+最终报告:
+- 正文顺序(先亮题):题目 → 为什么 → 意义 → 假设 → 假设依据 → 怎么做
+- 文内必须整合:文献矩阵、要点、Gap、候选与选定、识别要点
+- 论述须充分(文献/理论/推理),禁止一句话观点或只贴表不论证
 
 本技能**强制 5 次 Checkpoint 硬暂停**(文献确认 → 矩阵审阅 → 主题选择 → 假设确认 → 最终交付),不得跳过、不得代用户自动确认。
 另有 Phase 0 三问(信息未齐时 BLOCKING)。请提前准备 PDF / 文献条目(5-50 篇)。
@@ -75,6 +82,23 @@ flowchart TD
 **主题不是"想出来"的,是"看出来"的**。
 本 skill 强制按 6 步走:**用户上传文献 → 文献综述 → 涌现主题 → 提炼假设 → 因果识别 → 交付**。
 每一步都建立在前一步的产出上,禁止跳步。
+
+---
+
+## 最终产品规格(全局纪律 · 必读)
+
+**完成态**:用户只打开 `00_研究计划报告.md` 即可带走选题(正文六段 + 文内矩阵/要点/Gap/候选/识别)。过程文件仅审计。
+
+| 必读 | 说明 |
+|---|---|
+| ★ `00_研究计划报告.md` | 唯一面向用户的完成态 |
+| `00_交付说明.md` | 打开目录时的入口(init 生成) |
+| 详细规格 | [`references/delivery-spec.md`](references/delivery-spec.md)(字数/附录/复跑/分档**只在此维护**) |
+| 金样例 | [`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/) |
+
+**正文顺序(先亮题)**:题目 → 为什么 → 意义 → 假设 → 假设依据 → 怎么做。  
+**硬规则摘要**:充分论述(禁止一句话);附录 A 矩阵不可用「详见 Step2b」代替;`check_step --step 6` 校验字数/段落/矩阵行/占位符。  
+**复跑**:仅当用户明确沿用 + 存在 `00_复跑决策记录.md` 且文献/收窄未变;否则仍 5 闸(见 delivery-spec §5)。
 
 ---
 
@@ -203,7 +227,7 @@ Step 4 · 提炼假设       DAG + 反事实 + 效应量 → 用户确认
        ↓ 🛑 Checkpoint #4(假设确认 + Grill 追问) → check_step.py --step 4
 Step 5 · 因果识别       自动检测研究类型,推断性研究才启用
        ↓ 🛑 Checkpoint #5(最终交付审阅) → check_step.py --step 6
-Step 6 · 交付物         汇总 + 后续步骤建议
+Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为附录)
 ```
 
 ## 🎯 Step 3a 输出格式:3 主推 + 2 备选 + topic_scores.json
@@ -374,15 +398,15 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ### Checkpoint #5 · 最终交付审阅(Step 6 后) · 强制暂停
 
-向用户展示完整 9 个产出文件清单。
+向用户**优先展示** `00_研究计划报告.md`(六段式主交付),过程文件只作附录提示,不得把文件清单当成主产品。
 
 **Grill 追问**:
 
-1. **完整性**:"所有 Step 1-6 产出文件是否齐全?"
-2. **可投稿性**:"这个研究计划的产出能否直接拿去开题?"
-3. **下一步**:"你下一步准备做什么?(跑实证 / 写文献综述 / 找合作者)"
+1. **主交付可读性**:"六段报告是否把题、意义、假设、做法讲清楚?还要不要改表述?"
+2. **可开题/投稿性**:"这份报告能否直接拿去开题或当投稿框架?"
+3. **下一步**:"你下一步准备做什么?(跑实证 / 写文献综述 / 找合作者 / 收工)"
 
-**必须**等用户确认交付清单并说明下一步(或明确「收工」)。未确认前不得说「流程已全部完成」。
+**必须**等用户确认主交付并说明下一步(或明确「收工」)。未确认前不得说「流程已全部完成」。
 
 ---
 
@@ -420,23 +444,21 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ### Step 2a · 读 PDF 提要点(无 PDF 跳过)
 
-**核心原则**:**直接用 Read 工具读 PDF,读不出来的舍弃并提醒用户,不做 OCR、不调用外部工具**。
+**核心原则**:优先抽取 PDF **文字层**得到真实文本;不做 OCR;不自动检索。
 
 **适用条件**:用户提供的文献含 PDF 文件。
 
 **动作**:
-1. 对每一篇 PDF,**直接用 Read 工具尝试读**(`Read file_path=xxx.pdf pages=1-N`)
-2. 读成功的 → 提取结构化要点(研究问题 / 理论框架 / 数据样本 / 方法 / 主要发现 / 自报局限 / 关联初判)
-3. **读不出来的**(扫描版 / 无文字层 / 加密)→ **舍弃该篇 + 提醒用户**:此 PDF 未能提取文字,已跳过。建议手动提取摘要或换可读版本
-4. 用户文献全是引用列表(无 PDF) → 跳过此步,Step 2b 直接用用户提供的信息建矩阵
+1. 对每一篇 PDF,先用 Read 尝试;若返回原始结构/乱码/无可用正文,则改用本机文字层抽取(`pdftotext` / PyMuPDF `fitz` / `pypdf` 等)**抽取已有文字层**(这不是 OCR)
+2. 抽取成功 → 写结构化要点(研究问题 / 理论框架 / 数据样本 / 方法 / 主要发现 / 自报局限 / 关联初判),**每篇要点用完整段落**,禁止只有一行标题式摘要
+3. **文字层仍不存在**(扫描版 / 纯图 / 加密且无法解密)→ **舍弃该篇 + 提醒用户**,不做 OCR
+4. 用户文献全是引用列表(无 PDF) → 跳过此步,Step 2b 用用户提供的信息建矩阵(字段可降级)
 
-**输出**:`Step2a-points.md`(每篇可读文献 1 张要点卡,约 200-400 字/篇)。
+**输出**:`Step2a-points.md`(每篇可读文献 1 张要点卡,建议 200-400 字/篇,可进主报告附录 B 时再压缩)。
 
-**为什么不做 OCR**:
-- 学术用户上传的文献通常本身就可读(不是扫描版)
-- OCR 工具(如 MinerU)需要额外 token / 安装 / 配置,门槛太高
-- 读不出的文献**通常用户自己也知道**("这篇是扫描的")
-- 舍弃比硬挤更有价值——能保证后续分析基于真实可读文本
+**边界**:
+- 允许文字层工具;禁止为扫描件做 OCR 流水线
+- 后续矩阵/Gap/主报告必须基于真实读到的文本,禁止凭文件名臆造发现
 
 ### Step 2b · 建文献矩阵
 
@@ -523,72 +545,57 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 **前置判断**:读 Step 3b 的"研究类型标签":
 - **推断性**(标签 = 推断性):**启用**本步
-- **描述性 / 质性**(标签 = 描述性 / 质性):**跳过**本步,在 `Step6-summary.md` 中说明"研究类型为描述性,不需要因果识别"
+- **描述性 / 质性**(标签 = 描述性 / 质性):**跳过**本步,在主交付 `00_研究计划报告.md` 第 6 段说明"研究类型为描述性/质性,不需要因果识别"及替代路径
 
-**调用**:`causal-inference-architect`(来自 `claude-academic-skills` skill 库,MIT)
+**可选增强**:`causal-inference-architect`(未安装时本 skill 自写识别段落,不阻塞)。
 
 **动作**:对每个假设,给出:
 - **识别策略**:RCT / 自然实验 / 准实验 / 观察性研究
 - **具体方法**:DID / IV / RDD / PSM / SCM / DML ...
 - **关键假设检验**:平行趋势 / 外生性 / 连续性 ...
-- **工具变量建议**:如果用 IV,给具体 IV 候选
-- **稳健性检验清单**:placebo、subsample、alternative IV、样本期截断 ...
+- **工具变量建议**:仅当使用 IV 时填写;纯 DID 写「本节不适用」
+- **稳健性检验清单**:placebo、subsample、样本期截断 ...
 - **反例与威胁**:常见的失败模式
 
-**输出**:`Step5-identification-strategy.md`(每个假设 1 段,约 200-400 字)。
+**输出**:`Step5-identification-strategy.md`(每个假设 1 段,约 200-400 字)。闸门只强制「识别策略」「稳健性」。
 
 ---
 
-## Step 6 · 交付物
+## Step 6 · 用户主交付
 
-**动作**:汇总所有产出,给用户一份"研究计划草稿"+ 后续步骤建议。
+**规格全文**:[`references/delivery-spec.md`](references/delivery-spec.md)  
+**金样例**:[`examples/漂绿治理-绿贷与环境税组合/00_研究计划报告.md`](examples/漂绿治理-绿贷与环境税组合/00_研究计划报告.md)
 
-**交付物清单**:
+### 动作(强制)
+
+1. 按 delivery-spec 写/刷新 `00_研究计划报告.md`(正文六段 + 附录 A–E,推荐 F)
+2. 同步写 `00_交付说明.md`(只指向主报告)
+3. 可选极简 `Step6-summary.md` → 一行指向主报告
+4. 跑 `python scripts/check_step.py --workdir <dir> --step 6`(含字数/段落/矩阵行/占位符)
+5. 对用户**只置顶主报告**;禁止以「Step 文件清单」为完成中心句
+6. Checkpoint #5:请用户审阅主报告可读性/可开题性/下一步
+
+### 工作目录(交付优先排序)
 
 ```
-<工作目录>/outputs/
-├── Step1-input.md                  确认后的输入
-├── Step2a-points.md                文献要点卡(可选)
-├── Step2b-literature-matrix.csv    文献矩阵
-├── Step2c-gap-verdicts.md          gap 裁定
-├── Step3a-candidate-themes.md      候选主题
-├── Step3b-selected-theme.md        选定主题
-├── Step4-hypotheses.md             研究假设
-├── Step5-identification-strategy.md  因果识别(可选)
-└── Step6-summary.md                总结 + 后续步骤建议
+<workdir>/
+├── 00_交付说明.md                 ← 入口
+├── 00_研究计划报告.md             ← ★ 主交付
+├── 00_任务元信息.md / 00_复跑决策记录.md
+├── Step1…Step5 / topic_scores / review_*   ← 过程审计
+└── Step6-summary.md               ← 可选指针
 ```
-
-**后续步骤建议**(给用户):
-- 进 Stata 实证:用 `stata-mcp` 跑基准回归 + 稳健性
-- 进文献精读:用 `bilingual-paper-reader` 复读关键文献
-- 进方法精化:用 `causal-inference-architect` 复核识别策略
-- 进研究计划书写:把这 6 步产出组装成 5000-8000 字的研究计划文档
-
-**输出**:`Step6-summary.md`(总结 + 后续建议)。
 
 ---
 
 ## 协议与依赖
 
 - **协议**:MIT(可商用)
-- **依赖 skill**(均 MIT,来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)):
-  - `bilingual-paper-reader` — Step 2a 读 PDF
-  - `literature-matrix-builder` — Step 2b 建矩阵
-  - `causal-inference-architect` — Step 5 因果识别
-  - `research-method-selector` — check-ready.sh 环境检查
-
-**依赖安装**(首次使用必做,否则 Step 2/5 会卡):
-
-```bash
-git clone --depth 1 https://github.com/Nero1688/claude-academic-skills.git /tmp/cas
-for s in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector; do
-  cp -r "/tmp/cas/skills/$s" ~/.claude/skills/
-done
-# 验证:bash check-ready.sh
-```
-
-- **不依赖**:`open-science-skills`(因 CC BY-NC 4.0 非商用冲突)
-- **本 skill 自写的步骤**:Step 2c(gap裁定)/ Step 3(主题涌现)/ Step 4(假设提炼)
+- **可选增强 skill**(MIT,[Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)):未安装**不阻塞**主路径
+  - `bilingual-paper-reader` / `literature-matrix-builder` / `causal-inference-architect` / `research-method-selector`
+- **默认路径**:文字层抽取 PDF + 本 skill 自写矩阵/Gap/主题/假设/主报告
+- **不依赖**:`open-science-skills`(CC BY-NC 4.0)
+- **本 skill 自写**:Step 2c / 3 / 4 / 6 主报告整合
   - 基于公开学术标准(参见 `references/methodology-sources.md`)
   - 不复制任何受版权保护的 skill 代码或条款原文
 
@@ -617,7 +624,8 @@ done
 ├── references/
 │   └── methodology-sources.md            方法论参考来源(参见用)
 ├── examples/
-│   └── 气候风险对企业绿色转型/            完整跑通案例(9 产出 + 2 审查 verdict + topic_scores)
+│   ├── 漂绿治理-绿贷与环境税组合/         ★ v0.3.2+ 金样例(主报告完成态)
+│   └── 气候风险对企业绿色转型/            旧过程样例(见 LEGACY.md)
 ├── scripts/
 │   ├── init_project.py                   初始化工作目录(生成 11 个模板)
 │   ├── check_step.py                     刚性闸门校验
@@ -647,6 +655,9 @@ done
 
 ## 版本
 
+- **v0.3.3**(2026-08-11):**鲁班三刀**。①`check_step` Step6 加固(字数/段落/矩阵行/占位符,空壳 FAIL);②金样例 `examples/漂绿治理-绿贷与环境税组合/`;③`references/delivery-spec.md` 外置规格 + SKILL 瘦身;依赖改可选;Step5 不强制 IV。
+- **v0.3.2**(2026-08-11):**交付纪律全局化**。新增「最终产品规格」总纲;主报告=正文六段+文内矩阵/要点/Gap/候选/识别;论述须充分;复跑模式可跳过重复询问;Step2a 允许文字层抽取(非 OCR)。
+- **v0.3.1**(2026-08-11):**用户主交付定型 — 六段式研究计划报告**。Step 6 主产品改为 `00_研究计划报告.md`(1 题目 → 2 为何选题 → 3 意义 → 4 假设 → 5 假设依据 → 6 怎么做);Step1–5 降为过程附录;禁止把文件清单当最终交付中心。顺序要求**先亮题再论证**。实测反馈:过程文件过多淹没选题目标。
 - **v0.3.0**(2026-08-10):**精雕 — 从骨架+纪律升级到可视化+传播资产**。SKILL.md frontmatter 触发词 19 条 + 顶部 mermaid 流程图;README 首屏 6 个徽章 + ASCII 流程图 + 5 闸硬暂停表格 + 触发词云;新增 `CHANGELOG.md` / `assets/diagram/` / `assets/comparison.md`。**逻辑骨架未动**(v0.2.9 的 5 闸硬暂停保留)。
 - **v0.2.9**(2026-08-10):**强制 5 次 Checkpoint 硬暂停**。#1–#5 全部硬暂停;禁止代选/合并跳过/用 check_step 代替用户确认;修正 Step3/4 闸门编号。
 - **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。

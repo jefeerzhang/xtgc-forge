@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Independent Review: 2 verdicts](https://img.shields.io/badge/Independent%20Review-2%20verdicts-blue)](SKILL.md#-刚性闸门--独立审查)
-[![Examples: 1 domain](https://img.shields.io/badge/Examples-1%20domain-green)](examples/)
+[![Examples: 2](https://img.shields.io/badge/Examples-2%20(1%20gold)-green)](examples/漂绿治理-绿贷与环境税组合/)
 [![Test Prompts: 3](https://img.shields.io/badge/Test%20Prompts-3-orange)](test-prompts.json)
 [![Runtime: Claude Code](https://img.shields.io/badge/Runtime-Claude%20Code-blueviolet)](check-ready.sh)
 
@@ -19,7 +19,8 @@
    ↓
 5 个 🛑 硬闸(必须用户点名确认,Agent 不得代选)
    ↓
-研究计划草稿 + topic_scores.json + 2 个独立审查 verdict
+★ 一份六段式研究计划报告(题目→为何选题→意义→假设→依据→怎么做)
+  (+ 过程附录:矩阵/gap/scores/审查,默认不必通读)
 ```
 
 - **硕博开题** — 导师说"自己找方向",5 篇 PDF + 一句话领域就开跑
@@ -49,16 +50,18 @@
 
 ## ✨ 它会交付什么?
 
-| 阶段 | 产出 | 文件 |
-|---|---|---|
-| Step 1 | 输入确认 | `Step1-input.md` |
-| Step 2a | 文献要点卡 | `Step2a-points.md` |
-| Step 2b | 文献矩阵(Excel 友好) | `Step2b-literature-matrix.md` |
-| Step 2c | Gap 裁定 | `Step2c-gap-verdicts.md` |
-| Step 3 | 候选研究主题 + 选定 | `Step3a-candidate-themes.md` + `Step3b-selected-theme.md` |
-| Step 4 | 研究假设 + DAG | `Step4-hypotheses.md` |
-| Step 5 | 因果识别策略(可选) | `Step5-identification-strategy.md` |
-| Step 6 | 总结 + 后续步骤 | `Step6-summary.md` |
+### ★ 用户主交付(只看这一份)
+
+**★ 用户只读一份**: `00_研究计划报告.md`  
+（打开目录先看 `00_交付说明.md`）
+
+- 正文六段（先亮题）: 题目 → 为什么 → 意义 → 假设 → 依据 → 怎么做  
+- 文内附录: 矩阵 · 要点 · Gap · 候选与选定 · 识别  
+- 详细规格: [`references/delivery-spec.md`](references/delivery-spec.md)  
+- **金样例**: [`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/)
+
+Step1–5 / review / scores = **过程审计**，默认不必通读。  
+`check_step --step 6` 会拒绝空壳主报告（字数/段落/矩阵行/占位符）。
 
 ## 🚀 快速开始
 
