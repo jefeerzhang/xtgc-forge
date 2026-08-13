@@ -19,6 +19,7 @@
       "research_type": "推断性",
       "t_score": 0.42,
       "tier": "differentiated",
+      "reveals": "机构投资者的治理作用随政策环境变化（甚至符号反转），打破『机构监督必然改善披露』的单一叙事",
       "scores": {
         "importance": 5,
         "feasibility": 4,
@@ -40,6 +41,7 @@
       "research_type": "推断性",
       "t_score": 0.50,
       "tier": "differentiated",
+      "reveals": "两个已被证明有效的单工具在并存时的相互作用方向（互补/替代），从『单工具是否显著』推进到『多工具如何配置』",
       "scores": {
         "importance": 5,
         "feasibility": 5,
@@ -61,6 +63,7 @@
       "research_type": "推断性",
       "t_score": 0.60,
       "tier": "safe",
+      "reveals": "外部政策冲击进入组织后，内部治理可能削弱而非放大政策效果（遮掩链），而非默认协同",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -82,6 +85,7 @@
       "research_type": "推断性",
       "t_score": 0.62,
       "tier": "safe",
+      "reveals": "何种产权—市场—政策组合对应低漂绿，把碎片化异质证据整合为可操作的组态条件",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -103,6 +107,7 @@
       "research_type": "推断性",
       "t_score": 0.58,
       "tier": "safe",
+      "reveals": "漂绿治理通过『去漂绿』传导至融资成本与信贷可得，给治理效果补上经济后果这一环",
       "scores": {
         "importance": 4,
         "feasibility": 4,

@@ -18,6 +18,7 @@
       "research_type": "推断性",
       "t_score": 0.48,
       "tier": "differentiated",
+      "reveals": "数字化在气候风险冲击下充当避税行为的缓冲机制(调节方向为负),而非泛泛的『数字化转型有益』",
       "scores": {
         "importance": 5,
         "feasibility": 4,
@@ -39,6 +40,7 @@
       "research_type": "推断性",
       "t_score": 0.62,
       "tier": "safe",
+      "reveals": "气候风险对企业绿色转型的负向影响及其物理/转型风险渠道分异,补上宏观气候风险到微观企业行为的实证一环",
       "scores": {
         "importance": 5,
         "feasibility": 5,
@@ -60,6 +62,7 @@
       "research_type": "推断性",
       "t_score": 0.45,
       "tier": "differentiated",
+      "reveals": "数字化通过信息透明化/决策去中心化降低气候风险敞口的具体机制,而非只看数字化是否『有用』",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -81,6 +84,7 @@
       "research_type": "推断性",
       "t_score": 0.60,
       "tier": "safe",
+      "reveals": "气候风险对传统 FDI 与绿色 FDI 的差异化冲击,为国际文献矛盾提供类型维度的调和证据",
       "scores": {
         "importance": 3,
         "feasibility": 3,
@@ -102,6 +106,7 @@
       "research_type": "质性",
       "t_score": 0.55,
       "tier": "safe",
+      "reveals": "气候风险如何推动企业组织结构与战略的质性调整路径,补上财务后果之外的组织维度",
       "scores": {
         "importance": 3,
         "feasibility": 2,

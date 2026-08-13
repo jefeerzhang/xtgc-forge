@@ -54,13 +54,14 @@ GATES = {
     "3a": {
         "file": "Step3a-candidate-themes.md",
         "min_lines": 15,
-        "required_keywords": ["主推", "备选", "理论贡献", "方法可行性", "研究类型", "模态识别"],
+        "required_keywords": ["主推", "备选", "理论贡献", "方法可行性", "研究类型", "模态识别", "揭示了什么"],
         "min_count": {
             "主推": 3,
             "备选": 2,
             "研究类型": 5,
+            "揭示了什么": 5,
         },
-        "fail_msg": "Step 3a: 候选主题格式不对。需要 3 主推 + 2 备选,各含理论贡献 + 方法可行性 + 研究类型;且须含「模态识别」小节(反坍缩 Phase 1)",
+        "fail_msg": "Step 3a: 候选主题格式不对。需要 3 主推 + 2 备选,各含理论贡献 + 方法可行性 + 研究类型 + 揭示了什么(贡献类型门);且须含「模态识别」小节(反坍缩 Phase 1)",
     },
     "3b": {
         "file": "Step3b-selected-theme.md",
@@ -100,13 +101,14 @@ GATES = {
             "Gap",
             "Gap 判定方法",
             "证据链",
+            "威胁文献",
             "附录 A",
             "附录 B",
             "附录 C",
             "附录 D",
             "附录 E",
         ],
-        "fail_msg": "Step 6: 缺少 00_研究计划报告.md,或未按六段+整合附录框架撰写。附录 C 须含「Gap 判定方法」段(反黑箱,见 delivery-spec §3.1)",
+        "fail_msg": "Step 6: 缺少 00_研究计划报告.md,或未按六段+整合附录框架撰写。附录 C 须含「Gap 判定方法」段(反黑箱)+「威胁文献清单」段,见 delivery-spec §3.1",
     },
 }
 
@@ -349,6 +351,23 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
 
         if "research_type" not in c:
             errors.append(f"{prefix}: 缺少 'research_type' 字段")
+
+        # 贡献类型门(v0.3.7):每个候选必须回答「这个题揭示了什么」
+        reveals = c.get("reveals")
+        if not reveals or not isinstance(reveals, str) or not reveals.strip():
+            errors.append(
+                f"{prefix}: 缺少 'reveals' 字段(贡献类型门)。每个候选必须回答『这个题揭示了什么』——答不上 = 工程任务/重复验证,回炉"
+            )
+        else:
+            reveals = reveals.strip()
+            if len(reveals) < 8:
+                errors.append(
+                    f"{prefix}: 'reveals' 过短({len(reveals)}字 < 8)。『揭示了什么』答不上 = 工程任务/重复验证,回炉"
+                )
+            elif reveals == c.get("title"):
+                errors.append(
+                    f"{prefix}: 'reveals' 与标题完全相同——只是抄了题目,未回答『揭示了什么』,回炉"
+                )
 
     return (len(errors) == 0, errors)
 
