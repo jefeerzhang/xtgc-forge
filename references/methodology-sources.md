@@ -40,6 +40,15 @@
 - **Matt Pocock skills**(MIT)— `grill-me` / `wayfinder` / `handoff`
   - 参见:https://github.com/mattpocock/skills
 
+## 假设打磨方法论(三层假设闸)
+
+- **Carlini 结论优先测试** — "How to Win a Best Paper Award"
+  - 参见:https://nicholas.carlini.com/writing/2026/how-to-win-a-best-paper-award.html
+  - 借鉴:RS2(结论优先)/ RS3(单句金句)/ RS4(最险假设 1 周可测),经经管实证语境改写
+- **researcher-pack**(MIT)— research-strategy principles
+  - 参见:https://github.com/andrehuang/researcher-pack
+  - 借鉴:结论优先测试 / 单句金句 / 最险假设 + 快速验证路径,只借鉴理念不复述原文
+
 ## 写作风格参考
 
 - **Strunk & White** *The Elements of Style*(经典写作指南)

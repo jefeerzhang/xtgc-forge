@@ -72,11 +72,11 @@ GATES = {
     "4": {
         "file": "Step4-hypotheses.md",
         "min_lines": 15,
-        "required_keywords": ["假设", "DAG", "反事实", "可证伪", "SESOI"],
+        "required_keywords": ["假设", "DAG", "反事实", "可证伪", "SESOI", "三层假设闸"],
         "min_count": {
             "假设陈述": 3,
         },
-        "fail_msg": "Step 4: 假设文件缺少'假设陈述/DAG/反事实/可证伪/SESOI'字段,或假设数 < 3",
+        "fail_msg": "Step 4: 假设文件缺少'三层假设闸(结论优先/金句/最险假设)/假设陈述/DAG/反事实/可证伪/SESOI'字段,或假设数 < 3",
         "ban_placeholders": True,
     },
     "5": {
