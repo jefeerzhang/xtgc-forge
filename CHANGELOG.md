@@ -3,6 +3,17 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.16 · 2026-08-13 · 金样例可复验性加固(占位符闸门补漏 + process/ 布局兼容)
+
+**主线**:金样例是「Agent 应模仿的完成态」,但它本身不可复验——主报告附录 F 残留模板占位符、过程文件放进 `process/` 子目录后闸门脚本全部报「文件不存在」、README 还指向一个被 `.gitignore` 排除、仓库里从未存在的 `outputs/` 目录。本次把这三处一起收口:占位符闸门从「枚举拦截」升级为「通用拦截」,脚本文件解析支持 `process/` 子目录回退,文档引用对齐真实仓库。
+
+1. **占位符闸门补漏(根因修复)**:`PLACEHOLDER_PATTERNS` 原来只枚举 `<请填写` / `<YYYY-MM-DD>` / `<研究主题>` 等 3 个特定模式,而 init 模板家族实际有 20+ 个 `<中文...>` 形态占位符(`<用户文献目录>` / `<候选主题标题>` / `<来源 Gap 编号>` / `<具体哪几篇文献>` / `<这个题揭示了什么?禁止与标题雷同>` 等)全部漏网。新增通用模式 `r"<[\u4e00-\u9fff][^>]*>"`,整个 `<中文>` 占位符家族一次覆盖;模板生成后未填充即跑闸门 → 立即 FAIL(填充前不得过闸)
+2. **金样例占位残留清除(3 处)**:主报告附录 F「文献」行 `<用户文献目录>\测试文献\2` → 「6 篇(用户自备,见附录 A)」;`process/Step1-input.md` 文献源目录同款残留 → 「用户自备 6 篇 PDF」;旧样例 `Step2a-points.md` OCR 目录树头部 `<用户文献目录>\测试文献-OCR\` → 「测试文献-OCR\」
+3. **process/ 子目录布局兼容**:`check_step.py` 新增 `_resolve_workdir_file()` helper,所有产物文件(Step*/topic_scores/review_*/interaction-log/复跑记录/主报告)统一按「根目录 → `process/` 子目录」顺序解析,根目录优先、process/ 回退、皆无则报错。金样例 `process/` 下 Step1/2b/2c/3a/3b/4 + topic_scores 从「文件不存在」变为**全部 PASS**;`--step all` 失败项从 12 收敛到 4,仅剩金样例有意缺省的 Step2a/Step5/两个 review 文件
+4. **断链修复**:金样例 README 引用的 `outputs/漂绿与金融市场风险/`(被 `.gitignore` 排除、仓库中不存在)改为指向仓库内真实存在的 `process/`,校验章节更新为可执行命令并注明「`--step all` FAIL 是预期(有意缺省),非损坏;Step 6 主报告闸必须 PASS」;主 README 文件结构图 `outputs/` 标注改为「本地运行的中间文件(.gitignore 排除,不入库)」
+5. **不破坏**:5 个 Checkpoint、六道防线、六段式主报告闸、反坍缩/反黑话/反黑箱校验全部保留;未填充模板仍被拦截(helper 只影响文件查找位置,不影响校验逻辑)
+6. **版本**:SKILL.md frontmatter `version: "0.3.15"` → `"0.3.16"` + 标题 + README 版本块 + CHANGELOG 顶部 + `check-ready.sh` 自取 frontmatter(自动跟随)
+
 ## v0.3.15 · 2026-08-13 · 内置 academic-humanizer(jefeerzhang fork)
 
 **主线**:把 Step 6「去 AI 味润色」从「可选外部依赖」升级为「仓库自带 vendor/ 副本」,与 v0.3.14 把 Nero1688 子 skill 内置的逻辑一致——首次 `git clone` 即自洽可跑,不再需要用户额外 clone jefeerzhang 上游。
