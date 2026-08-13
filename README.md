@@ -6,6 +6,8 @@
 > 贡献类型门：每个候选必答「揭示了什么」，换标签的老题当场回炉。
 > 反黑箱：主报告自带「Gap 判定方法」+ 威胁文献清单，缺口怎么判出来的、谁可能抢先，一眼看穿。
 
+![选题工坊工作流](assets/xtgc-workflow.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
