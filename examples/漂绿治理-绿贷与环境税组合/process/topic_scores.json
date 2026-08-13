@@ -17,6 +17,8 @@
       "title": "机构投资者异质性与企业漂绿：政策窗口下的符号反转",
       "source_gap": "GAP-C1 + GAP-M2",
       "research_type": "推断性",
+      "t_score": 0.42,
+      "tier": "differentiated",
       "scores": {
         "importance": 5,
         "feasibility": 4,
@@ -36,6 +38,8 @@
       "title": "绿色信贷与环境税的组合治理：互补还是替代？",
       "source_gap": "GAP-B1",
       "research_type": "推断性",
+      "t_score": 0.50,
+      "tier": "differentiated",
       "scores": {
         "importance": 5,
         "feasibility": 5,
@@ -55,6 +59,8 @@
       "title": "政策冲击下内部治理的遮掩还是协同？",
       "source_gap": "GAP-C2 + GAP-B2",
       "research_type": "推断性",
+      "t_score": 0.60,
+      "tier": "safe",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -74,6 +80,8 @@
       "title": "中国情境组态：产权—市场—政策组合与漂绿治理",
       "source_gap": "GAP-T1",
       "research_type": "推断性",
+      "t_score": 0.62,
+      "tier": "safe",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -93,6 +101,8 @@
       "title": "漂绿治理的企业级金融后果：融资成本与信贷可得",
       "source_gap": "GAP-B4",
       "research_type": "推断性",
+      "t_score": 0.58,
+      "tier": "safe",
       "scores": {
         "importance": 4,
         "feasibility": 4,

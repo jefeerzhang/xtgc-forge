@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-选题工坊 · 刚性闸门检查脚本 (v0.3.3)
+选题工坊 · 刚性闸门检查脚本 (v0.3.4)
 
 校验每个 Step 产物的完整性、关键字段、最小内容长度。
 Step 6 额外校验主报告质量:附录结构、矩阵表行、段落深度、禁模板占位符。
@@ -8,7 +8,7 @@ Step 6 额外校验主报告质量:附录结构、矩阵表行、段落深度、
 支持:
   --step 1/2a/2b/2c/3a/3b/4/5/6      单 Step 校验
   --step all                         一次性校验全部(含 review)
-  --step scores                      topic_scores.json 单独校验
+  --step scores                      topic_scores.json 校验(含反坍缩 t_score/tier)
   --step scan-review                 review_scan.md 校验
   --step topics-review               review_topics.md 校验
 
@@ -54,13 +54,13 @@ GATES = {
     "3a": {
         "file": "Step3a-candidate-themes.md",
         "min_lines": 15,
-        "required_keywords": ["主推", "备选", "理论贡献", "方法可行性", "研究类型"],
+        "required_keywords": ["主推", "备选", "理论贡献", "方法可行性", "研究类型", "模态识别"],
         "min_count": {
             "主推": 3,
             "备选": 2,
             "研究类型": 5,
         },
-        "fail_msg": "Step 3a: 候选主题格式不对。需要 3 主推 + 2 备选,各含理论贡献 + 方法可行性 + 研究类型",
+        "fail_msg": "Step 3a: 候选主题格式不对。需要 3 主推 + 2 备选,各含理论贡献 + 方法可行性 + 研究类型;且须含「模态识别」小节(反坍缩 Phase 1)",
     },
     "3b": {
         "file": "Step3b-selected-theme.md",
@@ -98,13 +98,15 @@ GATES = {
             "可证伪",
             "文献矩阵",
             "Gap",
+            "Gap 判定方法",
+            "证据链",
             "附录 A",
             "附录 B",
             "附录 C",
             "附录 D",
             "附录 E",
         ],
-        "fail_msg": "Step 6: 缺少 00_研究计划报告.md,或未按六段+整合附录框架撰写",
+        "fail_msg": "Step 6: 缺少 00_研究计划报告.md,或未按六段+整合附录框架撰写。附录 C 须含「Gap 判定方法」段(反黑箱,见 delivery-spec §3.1)",
     },
 }
 
@@ -351,6 +353,92 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
+# T-Score 典型性分界(与 references/anti-collapse.md 一致)
+TIER_BANDS = {
+    "safe": (0.55, 0.81),  # 0.55 ≤ t < 0.81
+    "differentiated": (0.35, 0.55),
+    "innovative": (0.0, 0.35),
+}
+
+
+def _tier_of(t_score: float) -> str:
+    """由 t_score 推导层级(与 anti-collapse.md 分界一致)。"""
+    for tier, (lo, hi) in TIER_BANDS.items():
+        if lo <= t_score < hi:
+            return tier
+    return "safe"  # t ≥ 0.81 一律视为模态/安全层
+
+
+def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
+    """反坍缩闸门(v0.3.4):校验 topic_scores.json 的 t_score/tier 字段 + 主推多样性。
+
+    规则:
+    1. 每个候选必须有 t_score(0-1)与 tier(枚举)。
+    2. 3 个 decision=selected 主推必须覆盖 ≥ 2 个不同层级,且至少 1 个 t_score ≤ 0.50。
+       全落安全层即「选题坍缩」→ FAIL,退回 Phase 2 重生成。
+    """
+    errors = []
+    score_file = workdir / "topic_scores.json"
+    if not score_file.exists():
+        return (False, ["topic_scores.json 不存在,无法做反坍缩校验"])
+
+    try:
+        data = json.loads(score_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
+
+    candidates = data.get("candidates", [])
+    if len(candidates) != 5:
+        return (False, [f"candidates 长度 {len(candidates)} ≠ 5(应 3 主推 + 2 备选)"])
+
+    valid_tiers = {"safe", "differentiated", "innovative"}
+    for i, c in enumerate(candidates):
+        prefix = f"候选 #{i+1} ({c.get('label', '?')})"
+        t_score = c.get("t_score")
+        tier = c.get("tier")
+        if t_score is None:
+            errors.append(f"{prefix}: 缺少 't_score'(0-1 典型性分,反坍缩必填)")
+            continue
+        if not isinstance(t_score, (int, float)) or isinstance(t_score, bool):
+            errors.append(f"{prefix}: 't_score' 不是数值")
+            continue
+        if not (0 <= t_score <= 1):
+            errors.append(f"{prefix}: 't_score'={t_score} 不在 0-1 范围")
+        if tier is None:
+            errors.append(f"{prefix}: 缺少 'tier'(safe/differentiated/innovative)")
+        elif tier not in valid_tiers:
+            errors.append(f"{prefix}: 'tier'='{tier}' 非法,应为 safe/differentiated/innovative")
+        elif _tier_of(t_score) != tier:
+            # 层级与分界不一致:提示但不断言(启发式标尺,防误杀)
+            errors.append(
+                f"{prefix}: 't_score'={t_score} 推导层级为 '{_tier_of(t_score)}',"
+                f"与所填 '{tier}' 不一致(0.55≤safe<0.81 / 0.35≤differentiated<0.55 / <0.35 innovative)"
+            )
+
+    selected = [c for c in candidates if c.get("decision") == "selected"]
+    if len(selected) != 3:
+        errors.append(f"decision='selected' 的候选数 {len(selected)} ≠ 3(应 3 主推池)")
+    else:
+        tiers_used = {c.get("tier") for c in selected if c.get("tier") in valid_tiers}
+        has_low = any(
+            isinstance(c.get("t_score"), (int, float)) and not isinstance(c.get("t_score"), bool)
+            and 0 <= c["t_score"] <= 0.50
+            for c in selected
+        )
+        if len(tiers_used) < 2:
+            errors.append(
+                f"选题坍缩:3 主推层级集合 {sorted(tiers_used)} 只有 1 层,"
+                "需覆盖 ≥ 2 层(如 safe + differentiated/innovative),退回 Step 3a Phase 2 重生成"
+            )
+        if not has_low:
+            errors.append(
+                "选题坍缩:3 主推均 T > 0.50(全落安全层)。"
+                "至少 1 个主推 t_score ≤ 0.50(差异化/创新层),退回 Step 3a Phase 2 重生成"
+            )
+
+    return (len(errors) == 0, errors)
+
+
 def check_review(workdir: Path, target: str) -> tuple[bool, list[str]]:
     """校验 review_{target}.md 是否 PASS。"""
     errors = []
@@ -409,6 +497,9 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         ts_passed, ts_errors = check_topic_scores(workdir_path)
         if not ts_passed:
             all_errors.extend([f"[topic_scores.json] {e}" for e in ts_errors])
+        ac_passed, ac_errors = check_anti_collapse(workdir_path)
+        if not ac_passed:
+            all_errors.extend([f"[反坍缩] {e}" for e in ac_errors])
         for rt in ["scan", "topics"]:
             r_passed, r_errors = check_review(workdir_path, rt)
             if not r_passed:
@@ -416,7 +507,10 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         return (len(all_errors) == 0, all_errors)
 
     if step == "scores":
-        return check_topic_scores(workdir_path)
+        ts_passed, ts_errors = check_topic_scores(workdir_path)
+        ac_passed, ac_errors = check_anti_collapse(workdir_path)
+        combined = ts_errors + ac_errors
+        return (ts_passed and ac_passed, combined)
 
     if step == "scan-review":
         return check_review(workdir_path, "scan")
@@ -460,6 +554,10 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         if not ts_passed:
             errors.append("--- topic_scores.json 校验失败 ---")
             errors.extend(ts_errors)
+        ac_passed, ac_errors = check_anti_collapse(workdir_path)
+        if not ac_passed:
+            errors.append("--- 反坍缩校验失败 ---")
+            errors.extend(ac_errors)
 
     if step == "6":
         errors.extend(check_step6_quality(content))
@@ -474,7 +572,7 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="选题工坊 · 刚性闸门检查 v0.3.2")
+    parser = argparse.ArgumentParser(description="选题工坊 · 刚性闸门检查 v0.3.4")
     parser.add_argument("--workdir", "-w", required=True, help="工作目录(产出文件所在)")
     parser.add_argument("--step", "-s", required=True, help=f"Step 编号:{', '.join(VALID_STEPS)}")
     args = parser.parse_args()

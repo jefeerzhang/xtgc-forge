@@ -16,6 +16,8 @@
       "title": "气候风险背景下数字化转型对企业避税的影响",
       "source_gap": "GAP-B1 + GAP-B3",
       "research_type": "推断性",
+      "t_score": 0.48,
+      "tier": "differentiated",
       "scores": {
         "importance": 5,
         "feasibility": 4,
@@ -35,6 +37,8 @@
       "title": "气候风险对企业绿色转型的影响 — 基于 A 股上市公司的实证",
       "source_gap": "GAP-B2",
       "research_type": "推断性",
+      "t_score": 0.62,
+      "tier": "safe",
       "scores": {
         "importance": 5,
         "feasibility": 5,
@@ -54,6 +58,8 @@
       "title": "数字化转型能否降低企业气候风险敞口",
       "source_gap": "GAP-B4",
       "research_type": "推断性",
+      "t_score": 0.45,
+      "tier": "differentiated",
       "scores": {
         "importance": 4,
         "feasibility": 4,
@@ -73,6 +79,8 @@
       "title": "气候风险对不同类型 FDI 的差异影响",
       "source_gap": "GAP-C1",
       "research_type": "推断性",
+      "t_score": 0.60,
+      "tier": "safe",
       "scores": {
         "importance": 3,
         "feasibility": 3,
@@ -92,6 +100,8 @@
       "title": "气候风险对组织 / 战略调整的影响(质性)",
       "source_gap": "GAP-T2",
       "research_type": "质性",
+      "t_score": 0.55,
+      "tier": "safe",
       "scores": {
         "importance": 3,
         "feasibility": 2,

@@ -153,7 +153,14 @@ TEMPLATES = {
 
     "Step3a-candidate-themes.md": """# Step 3a · 候选研究主题(3 主推 + 2 备选)
 
-> 配合 `topic_scores.json`,每个候选含 6 维评分。
+> 配合 `topic_scores.json`,每个候选含 6 维评分 + 反坍缩字段(t_score / tier)。
+
+## 模态识别(反坍缩 Phase 1)
+| 模态题 | T-Score | 避免理由 |
+|---|---|---|
+| <最安全、最可预测的题 1> | 0.9 | <为何避免> |
+
+> 不点名,坍缩不可见。以下候选均刻意偏离上述模态。
 
 ## 🥇 主推 1
 - **来源 gap**:
@@ -163,6 +170,7 @@ TEMPLATES = {
 - **预期效应方向**:
 - **研究类型标签**:推断性
 - **降级条件**:
+- **T-Score(0-1) + 层级**:0.0 / safe
 
 (继续添加 主推 2 / 主推 3 / 备选 1 / 备选 2)
 
@@ -180,7 +188,7 @@ TEMPLATES = {
 
 ## 🛑 Checkpoint #3 · 用户选 1
 
-参考 `topic_scores.json` 的 6 维评分,选分数最高的;或说明降级到备选的原因。
+参考 `topic_scores.json` 的 6 维评分 + 反坍缩字段,选分数最高的;或说明降级到备选的原因。禁止默认选 total 最高项。
 """,
 
     "topic_scores.json": """{
@@ -201,6 +209,8 @@ TEMPLATES = {
       "title": "<候选主题标题>",
       "source_gap": "<来源 Gap 编号>",
       "research_type": "推断性|描述性|质性",
+      "t_score": 0.0,
+      "tier": "safe|differentiated|innovative",
       "scores": {
         "importance": 0,
         "feasibility": 0,
