@@ -12,7 +12,7 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.10"
+version: "0.3.11"
 license: MIT
 ---
 
@@ -641,11 +641,15 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ### 动作(强制)
 
 1. 按 delivery-spec 写/刷新 `00_研究计划报告.md`(正文六段 + 附录 A–E,推荐 F;附录 C 须含「Gap 判定方法」段 + 「威胁文献清单」段;正文须按 §3.3 术语翻译+断句,禁黑话)
-2. 同步写 `00_交付说明.md`(只指向主报告)
-3. 可选极简 `Step6-summary.md` → 一行指向主报告
-4. 跑 `python scripts/check_step.py --workdir <dir> --step 6`(含字数/段落/矩阵行/占位符)
-5. 对用户**只置顶主报告**;禁止以「Step 文件清单」为完成中心句
-6. Checkpoint #5:请用户审阅主报告可读性/可开题性/下一步(若曾启用对抗压测,主报告可含「被拒理由与回应」摘要段,便于向导师/审稿人预演)
+2. **去 AI 味润色(固定环节,v0.3.11)**:对主报告做文风润色——
+   - 已安装 `academic-humanizer-zh`(MIT):调用它对主报告润色(它锁定数字/引文/术语,只动文风)
+   - 未安装:按 [`references/deai-checklist.md`](references/deai-checklist.md) 六大病灶逐项自查润色
+   - **顺序铁律**:先翻译(反黑话)→ 后润色(去 AI 味),不可颠倒;humanizer 治不了黑话
+3. 同步写 `00_交付说明.md`(只指向主报告)
+4. 可选极简 `Step6-summary.md` → 一行指向主报告
+5. 跑 `python scripts/check_step.py --workdir <dir> --step 6`(含字数/段落/矩阵行/占位符/交互留痕/复跑授权)
+6. 对用户**只置顶主报告**;禁止以「Step 文件清单」为完成中心句
+7. Checkpoint #5:请用户审阅主报告可读性/可开题性/下一步(若曾启用对抗压测,主报告可含「被拒理由与回应」摘要段,便于向导师/审稿人预演)
 
 ### 工作目录(交付优先排序)
 
@@ -666,6 +670,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 - **可选增强 skill**(MIT,[Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)):未安装**不阻塞**主路径
   - `bilingual-paper-reader` / `literature-matrix-builder` / `causal-inference-architect` / `research-method-selector`
 - **默认路径**:文字层抽取 PDF + 本 skill 自写矩阵/Gap/主题/假设/主报告
+- **去 AI 味润色(Step 6 固定环节,非阻塞)**:优先调用 [`academic-humanizer-zh`](https://github.com/jefeerzhang/academic-humanizer-zh)(MIT);未安装按 `references/deai-checklist.md` 自查兜底。反黑话翻译在前、润色在后
 - **不依赖**:`open-science-skills`(CC BY-NC 4.0)
 - **本 skill 自写**:Step 2c / 3 / 4 / 6 主报告整合
   - 基于公开学术标准(参见 `references/methodology-sources.md`)
@@ -694,7 +699,10 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ├── README.md                             安装 + 触发示例
 ├── LICENSE                               MIT
 ├── references/
-│   └── methodology-sources.md            方法论参考来源(参见用)
+│   ├── delivery-spec.md                 主交付规格(§3.1/3.2 反黑箱、§3.3 反黑话、§5 复跑契约)
+│   ├── anti-collapse.md                 反坍缩方法论(T-Score 分层,借鉴 Diverga MIT 的 VS)
+│   ├── deai-checklist.md                去 AI 味自查清单(Step 6 润色兜底)
+│   └── methodology-sources.md           方法论参考来源(参见用)
 ├── examples/
 │   ├── 漂绿治理-绿贷与环境税组合/         ★ v0.3.2+ 金样例(主报告完成态)
 │   └── 气候风险对企业绿色转型/            旧过程样例(见 LEGACY.md)
@@ -727,6 +735,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ## 版本
 
+- **v0.3.11**(2026-08-13):**去 AI 味固定环节**。Step 6 强制润色:已装 `academic-humanizer-zh`(MIT)则调用它,未装按新增 `references/deai-checklist.md` 六大病灶自查(套话/价值词/抽象主语/名词化/排比/元评论);顺序铁律「先翻译(反黑话)后润色(去 AI 味)」;润色只动文风,数字/引文/术语一字不改。
 - **v0.3.10**(2026-08-13):**复跑契约收紧(口子 B)**。附录 F 决策表不再自动视为复跑授权;复跑授权必须由 `00_复跑决策记录.md`(含当次原话 + 时间)提供;`check_step --step 6 / all` 校验:声明复跑却无复跑记录 / 空壳记录 → FAIL;复跑模式仍须 interaction-log 5 闸留痕。修「复跑 = 合法不交互」漏洞。
 - **v0.3.9**(2026-08-13):**交互留痕(5 闸的证据)**。新增 `interaction-log.md`:每次 Checkpoint 暂停/确认后立即追加一行(闸门+状态+时间+**用户原话**,禁止代填);`check_step --step 6 / all` 强制 5 闸各有确认记录,缺任一闸或无原话 → FAIL,禁止未交互交付。修「5 闸全靠提示词自觉、无机器证明」的漏洞:没交互现在从静默假成功变成可见失败。
 - **v0.3.8**(2026-08-13):**可读性层(反黑话)**。主报告正文(开头→整合附录前)禁内部黑话(GAP 编号/Checkpoint/SESOI/t_score/反坍缩等,须按 delivery-spec §3.3 术语翻译表改成人话)+ 超长句闸门(>100 字 FAIL);`check_step --step 6` 强制;金样例正文 10 处黑话全部翻译。可选增强:可装 `academic-humanizer-zh`(MIT)做最后文风润色,但治不了黑话——顺序是「先翻译、后润色」。
