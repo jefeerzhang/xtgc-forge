@@ -559,6 +559,12 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
             errors.append("--- 反坍缩校验失败 ---")
             errors.extend(ac_errors)
 
+    if step == "3b" and "对抗压测" in content:
+        # 半强校验(v0.3.6):启用对抗压测就必须做完整;未启用不拦
+        for kw in ["魔鬼代言", "最可能被", "回应"]:
+            if kw not in content:
+                errors.append(f"Step 3b 已含「对抗压测」小节,但缺少字段 '{kw}'。启用即做完整:每条被拒理由须给回应")
+
     if step == "6":
         errors.extend(check_step6_quality(content))
 
