@@ -300,6 +300,95 @@ def check_step6_quality(content: str) -> list[str]:
             f"(主报告过短,未达开题框架厚度)"
         )
 
+    # 可读性层(v0.3.8):正文(开头→整合附录前)禁内部黑话 + 禁超长句
+    errors.extend(check_readability(content))
+
+    return errors
+
+
+# 正文黑名单(反黑话):内部审计术语不得出现在主报告正文(附录 C 技术对照区允许)
+BODY_JARGON = [
+    r"GAP-[A-Za-z][0-9A-Za-z]*",  # GAP 编号
+    r"\bt_score\b",  # 典型性评分
+    r"evidence_leverage",
+    r"negative_value",
+    r"feasibility\s*=",
+    r"topic_scores",
+    r"反坍缩",
+    r"Checkpoint",
+    r"\bSESOI\b",
+    r"（探索性）",
+]
+
+# 正文句子最大长度(以 。；为界),超过即 FAIL(断句规则)
+MAX_BODY_SENTENCE = 100
+
+
+def _strip_md_structure(text: str) -> str:
+    """剥离 markdown 结构行(标题/表格/代码块/公式块/分隔线/列表标记/引用标记),只留真散文。"""
+    lines = text.splitlines()
+    out = []
+    in_code = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
+        if re.match(r"^#{1,6}\s", stripped):  # 标题
+            continue
+        if re.match(r"^---+\s*$", stripped):  # 分隔线
+            continue
+        if stripped.startswith("|"):  # 表格行
+            continue
+        if stripped.startswith("\\[") or stripped.startswith("\\]"):  # LaTeX 公式块
+            continue
+        if re.search(r"\\[a-zA-Z]+", stripped):  # LaTeX 公式内容行(如 \beta1 GC{it}...)
+            continue
+        if stripped.startswith(">"):  # 引用:去标记保留内容
+            out.append(re.sub(r"^>\s?", "", line))
+            continue
+        # 列表行:去列表标记,保留内容
+        out.append(re.sub(r"^([-*]\s|\d+\.\s)", "", stripped))
+    joined = "\n".join(out)
+    # 去行内 markdown 符号,避免计数字符虚高
+    return re.sub(r"[`*_]", "", joined)
+
+
+def check_readability(content: str) -> list[str]:
+    """可读性闸门:正文(开头→「# 整合附录」前)反黑话 + 断句。附录为技术对照区,豁免。"""
+    errors = []
+    idx = content.find("# 整合附录")
+    body = content if idx == -1 else content[:idx]
+
+    # 1. 黑话禁止
+    for pat in BODY_JARGON:
+        hits = re.findall(pat, body)
+        if hits:
+            errors.append(
+                f"Step6: 正文出现内部术语「{pat}」×{len(hits)}(如 {hits[:2]})。"
+                "主报告是给读者/导师看的,须按 delivery-spec §3.3 术语翻译表改成人话;编号只在附录 C 对照"
+            )
+
+    # 2. 断句(超长句)——逐行测句长,避免跨行合并(标题+段/引用块+列表/公式拼成一坨)
+    prose = _strip_md_structure(body)
+    long_sentences = []
+    for line in prose.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        for piece in re.split(r"[。；？]", line):
+            if len(piece.strip()) > MAX_BODY_SENTENCE:
+                long_sentences.append(piece.strip())
+
+    if long_sentences:
+        longest = max(len(s) for s in long_sentences)
+        errors.append(
+            f"Step6: 正文有 {len(long_sentences)} 句超过 {MAX_BODY_SENTENCE} 字(最长 {longest} 字)。"
+            "长句拆短(目标 ≤60 字),每句一个主谓;超长段落拆段(见 delivery-spec §3.3)"
+        )
+
     return errors
 
 

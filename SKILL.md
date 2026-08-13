@@ -12,7 +12,7 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.7"
+version: "0.3.8"
 license: MIT
 ---
 
@@ -629,7 +629,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ### 动作(强制)
 
-1. 按 delivery-spec 写/刷新 `00_研究计划报告.md`(正文六段 + 附录 A–E,推荐 F;附录 C 须含「Gap 判定方法」段,见 delivery-spec §3.1 反黑箱)
+1. 按 delivery-spec 写/刷新 `00_研究计划报告.md`(正文六段 + 附录 A–E,推荐 F;附录 C 须含「Gap 判定方法」段 + 「威胁文献清单」段;正文须按 §3.3 术语翻译+断句,禁黑话)
 2. 同步写 `00_交付说明.md`(只指向主报告)
 3. 可选极简 `Step6-summary.md` → 一行指向主报告
 4. 跑 `python scripts/check_step.py --workdir <dir> --step 6`(含字数/段落/矩阵行/占位符)
@@ -716,6 +716,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ## 版本
 
+- **v0.3.8**(2026-08-13):**可读性层(反黑话)**。主报告正文(开头→整合附录前)禁内部黑话(GAP 编号/Checkpoint/SESOI/t_score/反坍缩等,须按 delivery-spec §3.3 术语翻译表改成人话)+ 超长句闸门(>100 字 FAIL);`check_step --step 6` 强制;金样例正文 10 处黑话全部翻译。可选增强:可装 `academic-humanizer-zh`(MIT)做最后文风润色,但治不了黑话——顺序是「先翻译、后润色」。
 - **v0.3.7**(2026-08-13):**贡献类型门 + 威胁文献清单**。①每个候选必答「揭示了什么」(答不上=工程任务/重复验证,`check_step --step 3a` + topic_scores 双校验,禁止与标题雷同);②Step 2c 加威胁文献定义,主报告附录 C 强制「威胁文献清单」段(致命/高/中分级 + 本题靠什么活下来 + 不在本批文献须诚实标注),`check_step --step 6` 校验「威胁文献」;③delivery-spec §3.2 新增规格,init 模板同步。借鉴 zhonxia 贡献类型门与 chgagne 威胁分级。
 - **v0.3.6**(2026-08-13):**主题对抗压测(可选增强)**。用户点名选定后,魔鬼代言人对主题出 2-3 条「最可能被审稿人拒的理由」+ 回应,写入 Step3b「对抗压测」小节;check_step 3b 半强校验(启用即做完整);借鉴 research-companion 7 维压测与 MultiAgent-Research-Ideator 实证参数(深迭代优于并行批判者)。用户说「不用」即跳过,不新增硬闸。
 - **v0.3.5**(2026-08-13):**反黑箱交付**。主报告附录 C 强制加「Gap 判定方法」段(五类判定规则 + 证据链要件 + 真实推理链示例);`check_step --step 6` 校验「Gap 判定方法」+「证据链」;规格见 delivery-spec §3.1。让「文献→缺口」不再黑箱:用户能看到缺口是怎么判出来的。
