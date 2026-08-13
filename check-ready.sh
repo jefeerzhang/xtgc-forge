@@ -9,8 +9,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 
+# 版本从 SKILL.md 动态读取,避免横幅与仓库版本漂移(曾硬编码 v0.2.9 滞后)
+SELF_VERSION="$(grep "^version:" "$SCRIPT_DIR/SKILL.md" 2>/dev/null | head -1 | tr -d '"' | awk '{print $2}')"
+[ -n "$SELF_VERSION" ] || SELF_VERSION="unknown"
+
 echo "================================================"
-echo "  选题工坊 v0.2.9 · 完整实测就绪检查"
+echo "  选题工坊 ${SELF_VERSION} · 完整实测就绪检查"
 echo "================================================"
 echo ""
 
@@ -60,8 +64,7 @@ echo ""
 echo "[3/4] 检查选题工坊 SKILL.md ..."
 if [ -f "$SCRIPT_DIR/SKILL.md" ]; then
     echo "  ✅ SKILL.md 存在($SCRIPT_DIR)"
-    VERSION=$(grep "^version:" "$SCRIPT_DIR/SKILL.md" | head -1 | tr -d '"' | awk '{print $2}')
-    echo "  当前版本:$VERSION"
+    echo "  当前版本:$SELF_VERSION"
 else
     echo "  ❌ SKILL.md 不存在(期望在 $SCRIPT_DIR)"
     exit 1
