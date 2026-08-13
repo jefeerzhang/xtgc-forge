@@ -780,10 +780,23 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
             errors.extend(ac_errors)
 
     if step == "3b" and "对抗压测" in content:
-        # 半强校验(v0.3.6):启用对抗压测就必须做完整;未启用不拦
-        for kw in ["魔鬼代言", "最可能被", "回应"]:
-            if kw not in content:
-                errors.append(f"Step 3b 已含「对抗压测」小节,但缺少字段 '{kw}'。启用即做完整:每条被拒理由须给回应")
+        # 半强校验(v0.3.12):启用对抗压测就必须做完整;未启用不拦
+        # 新格式:生存标签 + 至少 6 类坍缩攻击名(经管语境)
+        attack_kw = ["换情境", "换术语", "识别", "已被占", "不可证伪",
+                     "范围过宽", "数据质量", "不可行", "贡献类型"]
+        survival_kw = ["存活", "需收窄", "需转向", "坍缩"]
+        has_survival = any(k in content for k in survival_kw)
+        hit = sum(1 for k in attack_kw if k in content)
+        new_style_ok = has_survival and hit >= 6
+        # 旧格式(v0.3.6)兼容:魔鬼代言 + 最可能被拒 + 回应
+        old_style_ok = all(k in content for k in ["魔鬼代言", "最可能被", "回应"])
+        if not (new_style_ok or old_style_ok):
+            detail = ""
+            if not has_survival:
+                detail += "缺少四档生存标签(存活/需收窄/需转向/坍缩)。"
+            if hit < 6:
+                detail += f"9 类攻击仅命中 {hit}/9(换情境/换术语/识别/已被占/不可证伪/范围过宽/数据质量/不可行/贡献类型),至少攻击 6 类。"
+            errors.append(f"Step 3b 已含「对抗压测」小节,但未做完整:{detail}启用即做完整:每条攻击给 1 句回应 + 打 1 个生存标签")
 
     if step == "6":
         errors.extend(check_step6_quality(content))
