@@ -355,6 +355,62 @@ def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
         )
 
     return (len(errors) == 0, errors)
+
+
+# 复跑契约收紧(v0.3.10):附录 F 决策表不再是复跑授权;复跑记录必须含当次原话
+RERUN_PHRASES = ["按上次", "复跑", "不要再问", "沿用"]
+
+# 复跑声明(精确模式):只认「本次运行是复跑」的声明位
+# 「需复跑核实」「复跑核实」是威胁文献清单的语义(要再查证),不是复跑模式声明,不匹配
+# 附录 F 表行「| 复跑 | 否」表示当次新跑,不是复跑声明,排除
+RERUN_DECLARE_PATTERNS = [
+    r"复跑说明",                 # 顶部复跑说明
+    r"本复跑",                   # 正文/附录叙事「本复跑…」
+    r"\|\s*复跑\s*\|\s*(?!\s*否)",  # 附录 F 表格行 | 复跑 | (值非「否」)
+]
+
+
+def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, list[str]]:
+    """校验复跑授权合法性。
+
+    规则:
+    1. 主报告附录 F 声明「复跑」但无 00_复跑决策记录.md → FAIL(附录 F 只是历史记录,不是当次授权)
+    2. 00_复跑决策记录.md 存在但只有模板/占位符(无当次原话、无时间)→ FAIL(空壳拦截)
+    """
+    errors = []
+    rerun_file = workdir / "00_复跑决策记录.md"
+    main_report = main_report_path.read_text(encoding="utf-8") if main_report_path.exists() else ""
+
+    # 只认声明位:复跑说明 / 本复跑 / 附录F 表行「| 复跑 |」;「需复跑核实」等提及不算
+    declares_rerun = any(re.search(p, main_report) for p in RERUN_DECLARE_PATTERNS)
+    if declares_rerun and not rerun_file.exists():
+        errors.append(
+            "主报告声明「复跑」,但不存在 00_复跑决策记录.md。附录 F 决策表只是历史记录,"
+            "不是当次授权;复跑授权必须由 00_复跑决策记录.md(含当次原话)提供"
+        )
+        return (len(errors) == 0, errors)
+
+    if not rerun_file.exists():
+        return (True, [])  # 未复跑,无需复跑记录
+
+    content = rerun_file.read_text(encoding="utf-8")
+    has_quote = any(p in content for p in RERUN_PHRASES)
+    has_time = bool(re.search(r"\d{4}-\d{2}-\d{2}|\d{4}/\d{1,2}/\d{1,2}", content))
+    is_empty = len(content.strip()) < 30 or "待填" in content or "<" in content
+
+    if is_empty:
+        errors.append("00_复跑决策记录.md 为空壳(无内容/占位符),不得视为复跑授权")
+    if not has_quote:
+        errors.append(
+            "00_复跑决策记录.md 缺少用户当次原话引用(如「按上次选择」「复跑」「不要再问」)。"
+            "复跑授权必须引用用户当次真实说的话"
+        )
+    if not has_time:
+        errors.append("00_复跑决策记录.md 缺少决策时间(YYYY-MM-DD)")
+
+    return (len(errors) == 0, errors)
+
+
 BODY_JARGON = [
     r"GAP-[A-Za-z][0-9A-Za-z]*",  # GAP 编号
     r"\bt_score\b",  # 典型性评分
@@ -659,6 +715,11 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         il_passed, il_errors = check_interaction_log(workdir_path)
         if not il_passed:
             all_errors.extend([f"[交互留痕] {e}" for e in il_errors])
+        main_report = workdir_path / "00_研究计划报告.md"
+        if main_report.exists():
+            rr_passed, rr_errors = check_rerun_record(workdir_path, main_report)
+            if not rr_passed:
+                all_errors.extend([f"[复跑授权] {e}" for e in rr_errors])
         for rt in ["scan", "topics"]:
             r_passed, r_errors = check_review(workdir_path, rt)
             if not r_passed:
@@ -730,6 +791,10 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         if not il_passed:
             errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
             errors.extend(il_errors)
+        rr_passed, rr_errors = check_rerun_record(workdir_path, file_path)
+        if not rr_passed:
+            errors.append("--- 复跑授权校验失败 ---")
+            errors.extend(rr_errors)
 
     # 2c 额外:至少 3 条证据来源
     if step == "2c":
