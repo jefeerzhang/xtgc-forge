@@ -9,11 +9,30 @@
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version: v0.3.15](https://img.shields.io/badge/Version-v0.3.15-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
+[![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
 [![Anti-Blackbox: Gap 判定方法](https://img.shields.io/badge/Anti--Blackbox-Gap%20判定方法-green)](references/delivery-spec.md#31-附录-c-的gap-判定方法段反黑箱v035)
-[![Examples: 2](https://img.shields.io/badge/Examples-2%20(1%20gold)-green)](examples/漂绿治理-绿贷与环境税组合/)
+[![Anti-Jargon: 黑话+断句](https://img.shields.io/badge/Anti--Jargon-黑话%2B断句-orange)](references/delivery-spec.md#33-可读性层术语翻译--断句反黑话v038)
+[![De-AI: humanizer vendored](https://img.shields.io/badge/De--AI-humanizer%20vendored-purple)](vendor/academic-humanizer/)
+[![Examples: 2 (1 gold)](https://img.shields.io/badge/Examples-2%20(1%20gold)-green)](examples/漂绿治理-绿贷与环境税组合/)
 [![Runtime: Claude Code](https://img.shields.io/badge/Runtime-Claude%20Code-blueviolet)](check-ready.sh)
+
+## 30 秒看明白
+
+```
+📚 你的 5–50 篇 PDF + 一句话模糊领域
+        ↓
+🛠  6 步流水线(vendor/ 内置 5 个子 skill):
+    读 PDF → 建矩阵 → 找 gap → 出主题 → 提假设 → 设计识别
+        ↓
+🔒 5 个硬闸(每次暂停,你点头才能过)
+        ↓
+📄 1 份六段式研究计划报告(00_研究计划报告.md)
+```
+
+**与同类最大的不同**:**仓库自带** `vendor/` 5 个 MIT 子 skill(bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector / academic-humanizer),`git clone` 即自洽可跑,不依赖任何外部检索或额外安装。
 
 ## 你什么时候需要它
 
@@ -21,6 +40,7 @@
 你有 5-50 篇 PDF + 一句话领域
    ↓
 [ 6 步流水线：读 → 矩阵 → gap → 主题 → 假设 → 识别 ]
+       └─ vendor/ 内置 5 个子 skill 直接调用，无需外部安装
    ↓
 5 个硬闸（流程停顿点，你拍板）↔ 6 道防线（质量机制，机器把关）
    ↓
@@ -34,7 +54,7 @@
    ↓
 反黑话：正文禁黑话（GAP/SESOI/Checkpoint），长句 ≤100 字，报告读得懂
    ↓
-去 AI 味：humanizer 或六大病灶自查，文风不再像 AI 生成
+去 AI 味：vendor/academic-humanizer/ 调用 + 六大病灶兜底，文风不再像 AI 生成
    ↓
 ★ 一份六段式研究计划报告（题目 → 为何选题 → 意义 → 假设 → 依据 → 怎么做）
   （+ 过程附录：矩阵 / gap / scores / 审查，默认不必通读）
@@ -108,9 +128,10 @@ Step1–5 / review / scores 是过程审计，默认不必通读。
 - 超长句闸门：正文 >100 字句子 FAIL，目标 ≤60 字
 
 **去 AI 味（Step 6 · 固定润色环节）**：文风不再像 AI 生成。
-- 已装 `academic-humanizer-zh`（MIT）则调用它润色；未装按 `references/deai-checklist.md` 六大病灶自查（套话 / 价值词 / 抽象主语 / 名词化 / 排比 / 元评论）
+- v0.3.15+ 内置 `vendor/academic-humanizer/`（jefeerzhang fork，MIT），调用它润色；若 vendor 缺失，退到 `references/deai-checklist.md` 六大病灶自查（套话 / 价值词 / 抽象主语 / 名词化 / 排比 / 元评论）
 - 顺序铁律：先翻译（反黑话）→ 后润色（去 AI 味），humanizer 治不了黑话
 - 只动文风，数字 / 引文 / 术语一字不改
+- deai-checklist 作 humanizer 润色后**自查**（补 humanizer 边缘 case）
 
 **主题对抗压测（Step 3b · 可选增强）**：选定后被审稿人拒之前先自拒。
 - 魔鬼代言人按 **9 类坍缩攻击清单**（换情境 / 换术语 / 识别 / 已被占 / 不可证伪 / 范围过宽 / 数据质量 / 不可行 / 贡献类型）逐类攻击选定主题，每类 1 句回应
@@ -131,18 +152,15 @@ Step1–5 / review / scores 是过程审计，默认不必通读。
 ## 快速开始
 
 ```bash
-# 1. 装选题工坊本体
+# 1. 装选题工坊本体（含 vendor/ 内置的 4 个 Nero1688 子 skill，v0.3.14 起无需额外 clone）
 git clone --depth 1 https://github.com/jefeerzhang/xtgc-forge.git
 cd xtgc-forge
 mkdir -p ~/.claude/skills/选题工坊
 cp SKILL.md ~/.claude/skills/选题工坊/SKILL.md
-cp -r references/ scripts/ ~/.claude/skills/选题工坊/
+cp -r references/ scripts/ vendor/ ~/.claude/skills/选题工坊/
 
-# 2. 装依赖子 skill（可选，不装则走本 skill 自写路径）
-git clone --depth 1 https://github.com/Nero1688/claude-academic-skills.git /tmp/cas
-for s in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector; do
-  cp -r "/tmp/cas/skills/$s" ~/.claude/skills/
-done
+# 2. 装 vendored 脚本的 Python 依赖（仅在调用 scripts/*.py 时需要；纯 prose 流程可跳过）
+pip install pypdf requests openpyxl
 
 # 3. 就绪检查（可选传 PDF 目录做完整检查）
 bash check-ready.sh
@@ -152,6 +170,13 @@ bash check-ready.sh
 ```
 
 或者直接对 Claude 说：「我要用选题工坊，我有一些 PDF 在 X 目录下，主题是 X」。
+
+> 高级用户覆盖口：若你已经在 `$HOME/.claude/skills/<name>/` 装过 Nero1688 上游同名子 skill，
+> `check-ready.sh` 会优先探测仓库内 `vendor/<name>/`，未命中才退回外部。
+> 想强制走外部，可设 `export CLAUDE_SKILLS_DIR=/your/path`。
+
+> 调用 `vendor/literature-matrix-builder/scripts/litmatrix.py` 走 CrossRef 时建议设置 polite pool：
+> `export CROSSREF_MAILTO=you@example.com`（不设置也能跑，响应优先级略低）。
 
 ## 输入要求
 
@@ -229,10 +254,19 @@ bash check-ready.sh
 
 ## 依赖
 
-**主依赖**（均 MIT，来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)）：
-- `bilingual-paper-reader`：Step 2a 读 PDF（可选）
-- `literature-matrix-builder`：Step 2b 建矩阵
-- `causal-inference-architect`：Step 5 因果识别
+**已内置子 skill**（v0.3.14+ 随仓库 `vendor/` 发布，MIT；详见各子目录 `LICENSE` 与 `NOTICE.md`）：
+
+| 路径 | 上游 | 对应 xtgc-forge 步骤 |
+|---|---|---|
+| `vendor/bilingual-paper-reader/` | Nero1688 MIT | Step 2a 读 PDF（可选增强） |
+| `vendor/literature-matrix-builder/` | Nero1688 MIT | Step 2b 建文献矩阵 |
+| `vendor/causal-inference-architect/` | Nero1688 MIT | Step 5 因果识别（可选增强） |
+| `vendor/research-method-selector/` | Nero1688 MIT | Phase 0 方向未定时引路（可选） |
+| `vendor/academic-humanizer/` | jefeerzhang fork, AIScientists-Dev MIT | Step 6 去 AI 味润色 |
+
+> 上游 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills) 共 35 个 skill，本仓库仅取与工作流直接相关的 4 个。
+> [jefeerzhang/academic-humanizer-zh](https://github.com/jefeerzhang/academic-humanizer-zh) 是 [AIScientists-Dev/academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer) 的中文增强 fork（添加 `references/rules-zh.md` C7 中文规则层），本仓库取 fork 版。
+> 调用 vendored Python 脚本时需 `pip install pypdf requests openpyxl`（纯 prose 流程不依赖）。
 
 **不依赖**（避免协议冲突）：
 - ❌ open-science-skills（CC BY-NC 4.0 非商用）
@@ -246,6 +280,8 @@ MIT（可商用、可改编）。
 
 ## 版本
 
+- **v0.3.15**（2026-08-13）：**内置 academic-humanizer（jefeerzhang fork）**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」；`vendor/academic-humanizer/` 镜像 jefeerzhang fork，包含上游 AIScientists-Dev 的英文规则 + fork 增量添加的中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md`；LICENSE 放子目录（`vendor/academic-humanizer/LICENSE`，MIT Copyright 2026 AIScientists-Dev）；`NOTICE.md` 新增独立段声明上游 + 上游之上游（`blader/humanizer` / `koaeraser/ARMS`）三方 attribution；`check-ready.sh` 加 vendor probe，头部 `[1/5]→[1/6]`；无 transitive deps（无 Python / 无 pip）；`references/deai-checklist.md` 同步降级为 humanizer 兜底。
+- **v0.3.14**（2026-08-13）：**内置 4 个 Nero1688 子 skill**（`vendor/<name>/` drop-in，MIT）。把「可选外部依赖」换成仓库自带副本，首次 `git clone` 即自洽可跑，无需额外 clone Nero1688 上游；`check-ready.sh` 改为 vendor-first 探测，`CLAUDE_SKILLS_DIR` 仍作外置覆盖口；MIT 合规：`vendor/LICENSE` + `NOTICE.md` 双重声明；`.gitignore` 增 `Nero1688/`。SKILL.md 4 处引用、依赖块、致谢、`assets/comparison.md` 第 43 行同步更新；`scripts/check_step.py` 等闸门脚本不改动（原本就不调用 sub-skill）。
 - **v0.3.13**（2026-08-13）：**Step 4 三层假设闸（结论 → 金句 → 最险假设）**。假设提炼前先过三关：结论优先测试（先写理想结论，套话式「X 与 Y 相关」= 影响不足）、单句金句（一句话洞见，能当摘要首句）、最险假设 + 1-2 周可测（单一最可能杀死选题的假设 + mini 验证路径）。check_step Step 4 强制含「三层假设闸」；借鉴 Carlini 结论优先测试 + researcher-pack（MIT）RS2/RS3/RS4。
 - **v0.3.12**（2026-08-13）：**主题对抗压测升级为 9 类坍缩攻击 + 四档生存标签**。魔鬼代言人按经管语境翻译的 9 类攻击清单（换情境 / 换术语 / 识别 / 已被占 / 不可证伪 / 范围过宽 / 数据质量 / 不可行 / 贡献类型）逐类攻击选定主题并给回应，打 `存活 / 需收窄 / 需转向 / 坍缩` 生存标签；check_step 3b 校验升级；借鉴 zhangjunhuan846-hash 8 类坍缩攻击理念（经管化改写，不复制原文）。
 - **v0.3.11**（2026-08-13）：**去 AI 味固定环节**。Step 6 强制润色：已装 `academic-humanizer-zh`（MIT）则调用它，未装按 `references/deai-checklist.md` 六大病灶自查；顺序铁律「先翻译（反黑话）后润色（去 AI 味）」；只动文风，数字 / 引文 / 术语一字不改。
@@ -266,6 +302,7 @@ MIT（可商用、可改编）。
 ## 致谢
 
 - 灵感来自 Matt Pocock 的 `grill-me` / `wayfinder`（MIT）
-- 复用了 Nero1688 的 4 个子 skill（MIT）
+- **v0.3.14 起内置 4 个 Nero1688 子 skill**（来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)，MIT；详见 `vendor/LICENSE` 与 `NOTICE.md`）
+- **v0.3.15 起内置 academic-humanizer**（jefeerzhang fork，[GitHub](https://github.com/jefeerzhang/academic-humanizer-zh)；上游 [AIScientists-Dev/academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer) MIT；详见 `vendor/academic-humanizer/LICENSE` 与 `NOTICE.md`）
 - 反坍缩方法借鉴 Diverga 的 Verbalized Sampling（MIT）
 - 方法论参考了 JARS / PRISMA / DA-RT / Pearl DAG / VanderWeele / SESOI 等公开学术标准

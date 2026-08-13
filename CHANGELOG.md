@@ -3,6 +3,32 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.15 · 2026-08-13 · 内置 academic-humanizer(jefeerzhang fork)
+
+**主线**:把 Step 6「去 AI 味润色」从「可选外部依赖」升级为「仓库自带 vendor/ 副本」,与 v0.3.14 把 Nero1688 子 skill 内置的逻辑一致——首次 `git clone` 即自洽可跑,不再需要用户额外 clone jefeerzhang 上游。
+
+1. **布局**:`vendor/academic-humanizer/` 镜像 [jefeerzhang/academic-humanizer-zh](https://github.com/jefeerzhang/academic-humanizer-zh),但**剔除** 5 个资产文件(banner.svg / rednote-zh.svg / rednote-zh.png / x-en.svg / x-en.png,共约 300KB,纯社交卡片)、`.skill_id`、上游 `.gitignore`、上游 `README.md`(与 v0.3.14 剔除 `.git*`/`dist/`/`docs/` 同思路)。保留:`SKILL.md` + `LICENSE` + `references/rules-zh.md`(fork 增量 C7 中文层) + `examples/before-after.md`(上游英文样例) + `examples/before-after-zh-academic.md`(fork 增量中文样例)
+2. **命名**:SKILL.md frontmatter `name` 沿用上游 `academic-humanizer`(无 `-zh`),vendor 目录名 = frontmatter name(`vendor/academic-humanizer/`),与 v0.3.14 4 个子 skill 命名约定一致(host 文档历史使用的 `-zh` 是 GitHub repo slug,非 canonical name,本次统一)
+3. **法务**:`vendor/academic-humanizer/LICENSE` 单放(MIT, Copyright 2026 AIScientists-Dev;fork 未重署版权);`NOTICE.md` 新增独立段,声明 AIScientists-Dev(本仓库版权方)+ jefeerzhang(增量贡献方)+ blader/humanizer + koaeraser/ARMS(方法论上游)三方 attribution;传递依赖 = **无**(纯 prompt/contract skill,无 Python / 无 pip / 无 API key)
+4. **探测**:`check-ready.sh` 新增 vendor probe,`EXPECTED_SKILLS` 数组第 5 项加入 `academic-humanizer`,头部 `[1/5]…[5/5]` → `[1/6]…[6/6]`,vendor 缺失不阻塞(退到 deai-checklist 兜底)
+5. **文档**:`SKILL.md` 协议块新增 academic-humanizer 子段;`references/deai-checklist.md` 借鉴来源从 GitHub URL 改为 `vendor/academic-humanizer/references/rules-zh.md` 本地路径,角色从「首选润色器」降为「humanizer 兜底 + 润色后自查」;`references/delivery-spec.md` §3.3 由「可选增强(不强制)」改为「v0.3.15 起内置」;`README.md` 依赖块 4 项 → 5 项表格化、Nero1688 与 academic-humanizer 各自归口不同上游;`assets/comparison.md` **不更新**(academic-humanizer 不是直接同行,是上游依赖)
+6. **不破坏**:5 个 Checkpoint、`scripts/check_step.py` 闸门、六道防线(v0.3.4–v0.3.13)、Nero1688 vendor 子段、`vendor/LICENSE`(Nero1688 MIT 仍独占 root)—— 全部保留
+7. **版本**:SKILL.md frontmatter `version: "0.3.14"` → `"0.3.15"` + 标题 + README 版本块 + CHANGELOG 顶部 + `check-ready.sh` 自取 frontmatter(自动跟随)
+8. **升级路径**(给维护者):`git pull` jefeerzhang 上游 → `cp -r upstream/* vendor/academic-humanizer/`(覆盖,但需手工剔除新增 assets/) → 校验 SKILL.md frontmatter `name` 仍为 `academic-humanizer`(不要变成 `academic-humanizer-zh`)→ 跑 check-ready
+
+## v0.3.14 · 2026-08-13 · 内置 4 个 Nero1688 子 skill(vendor/)
+
+**主线**:把"可选外部依赖"换成"仓库自带 vendor/ 副本",让首次 `git clone` 即自洽可跑,不再需要用户额外 clone 上游 Nero1688 仓库。
+
+1. **布局**:`vendor/<skill>/` 镜像上游 `Nero1688/skills/<skill>/`,4 个 sub-skill 全部 drop-in 拷贝(SKILL.md + scripts/ + references/ + ATTRIBUTION.md),不拷贝上游 `.git*` / `dist/` / `docs/` / `CONTRIBUTING.md`(聚合仓库级维护产物,非 skill 内容)
+2. **法务**:`vendor/LICENSE` 复制 Nero1688 MIT 原件;新增 `NOTICE.md` 汇总上游声明与传递依赖(`pypdf` BSD-3-Clause、`requests` Apache-2.0、`openpyxl` MIT);host `LICENSE` 不动(MIT 对 MIT 兼容)
+3. **文档**:`SKILL.md` Step 2b/5 + 协议段 + 与同族 skill 分工表引用全部改走 `vendor/<name>/` 路径;`README.md` 快速开始删除 Nero1688 clone/cp loop,新增 `pip install pypdf requests openpyxl` 与 `CROSSREF_MAILTO` 礼仪提示,保留 `CLAUDE_SKILLS_DIR` 覆盖口供外置用户
+4. **探测**:`check-ready.sh` 新增 vendor-first 探测,global fallback 仍保留;头部 `[1/4]…[4/4]` 改为 `[1/5]…[5/5]`,新增第 5 段检查 `vendor/LICENSE` + `NOTICE.md` 存在
+5. **清理**:`.gitignore` 增 `Nero1688/` 一行,防探测期 clone 产物再被提交
+6. **不破坏**:5 个 Checkpoint、自写路径、`scripts/check_step.py` 闸门、六道防线(v0.3.4–v0.3.13)全部保留 —— `scripts/*.py` 原本就不调用 sub-skill(纯本地闸门),本次零闸门脚本改动
+7. **版本**:SKILL.md frontmatter `version` + 标题 + README 版本块 + CHANGELOG 顶部 + `check-ready.sh` 自取 frontmatter(自动跟随)
+8. **升级路径**(给维护者):`git pull` Nero1688 上游 → `cp -r upstream/skills/<name>/* vendor/<name>/` 覆盖 4 个目录 → `cp upstream/LICENSE vendor/LICENSE` → 跑 check-ready 校验
+
 ## v0.3.13 · 2026-08-13 · Step 4 三层假设闸
 
 **主线**:把「假设提炼」从「列出可证伪假设」升级为「先证明值得做,再写假设」——结论、金句、最险假设三层闸门,防止"看似严谨实则空泛"的假设。
@@ -123,6 +149,8 @@ v0.3.0 **不破坏** v0.2.x 的任何承诺:5 闸硬暂停、check_step.py、独
 ## 致谢
 
 - 灵感:Matt Pocock 的 `grill-me` / `wayfinder`(MIT)
-- 依赖:Nero1688 的 4 个子 skill(bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector,MIT)
+- 依赖(已内置 vendor/):
+  - Nero1688/claude-academic-skills 的 4 个子 skill(bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector,MIT;详见 `vendor/LICENSE` 与 `NOTICE.md`)
+  - v0.3.15+ academic-humanizer(jefeerzhang fork,MIT, 上游 AIScientists-Dev;详见 `vendor/academic-humanizer/LICENSE` 与 `NOTICE.md`)
 - 方法论参考:JARS / PRISMA / DA-RT / Pearl DAG / VanderWeele / SESOI 公开学术标准
 - 工坊:鲁班 Skill 打磨工坊

@@ -1,10 +1,10 @@
 # 去 AI 味检查清单(De-AI Checklist)
 
-> v0.3.11 引入。Step 6 主报告「去 AI 味润色」环节的**兜底清单**:
-> 已装 `academic-humanizer-zh`(MIT)时,用它润色,本清单作润色后自查;
-> 未装时,按本清单逐项自查润色(通用语言描述,不复制上游条款原文)。
+> v0.3.11 引入,v0.3.15 起改为 **humanizer 润色后的兜底自查清单**(Step 6 主报告「去 AI 味润色」环节):
+> 已装 `academic-humanizer`(jefeerzhang fork,内置于 `vendor/academic-humanizer/`,MIT)时,用它润色,**本清单作润色后自查**——humanizer 处理不了的边缘 case(它锁定技术术语、治不了中文黑话)由本清单补位;
+> 未装 vendor 或 vendor 缺失时,按本清单逐项自查润色(通用语言描述,不复制上游条款原文)。
 >
-> 借鉴来源:academic-humanizer-zh(MIT, https://github.com/jefeerzhang/academic-humanizer-zh )的中文规则层。
+> 借鉴来源:`vendor/academic-humanizer/references/rules-zh.md`(C7 中文规则层,jefeerzhang 在 AIScientists-Dev 上游之上增量添加,MIT)。
 
 ## 顺序铁律(不可颠倒)
 

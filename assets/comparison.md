@@ -40,7 +40,7 @@
 
 | Skill | 类型 | 与本 skill 的关系 |
 |---|---|---|
-| Nero1688/claude-academic-skills(35 skill) | **依赖** | 提供 bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector 4 个子 skill |
+| Nero1688/claude-academic-skills(35 skill) | **依赖(v0.3.14 内置)** | 选 4 个子 skill 置于 `vendor/`(MIT,源自此仓库);其余 31 个未取 |
 | K-Dense-AI/claude-scientific-skills | 间接同行 | 50+ skill 矩阵,自动检索;本 skill 立场相反但品牌策略值得学 |
 | Imbad0202/academic-research-skills v3.19 | 间接同行 | 13-agent deep research + 12-agent 写作;数字堆叠但**无用户硬闸** |
 | Tanue-Hou/research-topic-auditor(中文) | 间接同行 | 中文社科向,但部分功能 planned;无完整案例 |

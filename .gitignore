@@ -21,3 +21,6 @@ outputs/
 # 不要把 .env / 凭据提交
 .env
 .env.local
+
+# 探测期 Nero1688 上游 clone 产物(vendor/ 已内置,此目录不应再出现)
+Nero1688/

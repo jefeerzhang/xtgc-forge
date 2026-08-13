@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.13"
+version: "0.3.15"
 license: MIT
 ---
 
-# 选题工坊 v0.3.13
+# 选题工坊 v0.3.15
 
 ## 📊 流水线一览(图)
 
@@ -515,7 +515,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ### Step 2b · 建文献矩阵
 
-**调用**:`literature-matrix-builder`(来自 `claude-academic-skills` skill 库,MIT)
+**调用**:`vendor/literature-matrix-builder/`(已内置,MIT;Nero1688 上游;详见 NOTICE.md)
 
 **动作**:把文献汇总成 Excel/CSV 矩阵,字段:
 
@@ -643,7 +643,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 - **推断性**(标签 = 推断性):**启用**本步
 - **描述性 / 质性**(标签 = 描述性 / 质性):**跳过**本步,在主交付 `00_研究计划报告.md` 第 6 段说明"研究类型为描述性/质性,不需要因果识别"及替代路径
 
-**可选增强**:`causal-inference-architect`(未安装时本 skill 自写识别段落,不阻塞)。
+**调用**:`vendor/causal-inference-architect/`(已内置,MIT;Nero1688 上游;详见 NOTICE.md;未启用时本 skill 自写识别段落,不阻塞)。
 
 **动作**:对每个假设,给出:
 - **识别策略**:RCT / 自然实验 / 准实验 / 观察性研究
@@ -666,7 +666,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 1. 按 delivery-spec 写/刷新 `00_研究计划报告.md`(正文六段 + 附录 A–E,推荐 F;附录 C 须含「Gap 判定方法」段 + 「威胁文献清单」段;正文须按 §3.3 术语翻译+断句,禁黑话)
 2. **去 AI 味润色(固定环节,v0.3.11)**:对主报告做文风润色——
-   - 已安装 `academic-humanizer-zh`(MIT):调用它对主报告润色(它锁定数字/引文/术语,只动文风)
+   - 已安装 [`academic-humanizer`](https://github.com/jefeerzhang/academic-humanizer-zh)(jefeerzhang fork, MIT, AIScientists-Dev 上游;内置于 `vendor/academic-humanizer/`):调用它对主报告润色(它锁定数字/引文/术语,只动文风)
    - 未安装:按 [`references/deai-checklist.md`](references/deai-checklist.md) 六大病灶逐项自查润色
    - **顺序铁律**:先翻译(反黑话)→ 后润色(去 AI 味),不可颠倒;humanizer 治不了黑话
 3. 同步写 `00_交付说明.md`(只指向主报告)
@@ -691,10 +691,11 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ## 协议与依赖
 
 - **协议**:MIT(可商用)
-- **可选增强 skill**(MIT,[Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)):未安装**不阻塞**主路径
-  - `bilingual-paper-reader` / `literature-matrix-builder` / `causal-inference-architect` / `research-method-selector`
+- **内置子 skill**(MIT):v0.3.14 起随仓库发布,不阻塞主路径;详见各 vendor 子目录的 `LICENSE` 与 `NOTICE.md`
+  - **Nero1688 上游**(位于 `vendor/<name>/`,Nero1688 MIT 详见 `vendor/LICENSE`):`vendor/bilingual-paper-reader/` · `vendor/literature-matrix-builder/` · `vendor/causal-inference-architect/` · `vendor/research-method-selector/`
+  - **jefeerzhang fork(AIScientists-Dev 上游)**(位于 `vendor/academic-humanizer/`,MIT 详见该子目录 `LICENSE`;v0.3.15 新增)
 - **默认路径**:文字层抽取 PDF + 本 skill 自写矩阵/Gap/主题/假设/主报告
-- **去 AI 味润色(Step 6 固定环节,非阻塞)**:优先调用 [`academic-humanizer-zh`](https://github.com/jefeerzhang/academic-humanizer-zh)(MIT);未安装按 `references/deai-checklist.md` 自查兜底。反黑话翻译在前、润色在后
+- **去 AI 味润色(Step 6 固定环节,非阻塞)**:优先调用 `academic-humanizer`(jefeerzhang fork, MIT, AIScientists-Dev 上游;内置于 `vendor/academic-humanizer/`,本仓库 v0.3.15+ 自带);vendor 缺失时按 `references/deai-checklist.md` 自查兜底。反黑话翻译在前、润色在后
 - **不依赖**:`open-science-skills`(CC BY-NC 4.0)
 - **本 skill 自写**:Step 2c / 3 / 4 / 6 主报告整合
   - 基于公开学术标准(参见 `references/methodology-sources.md`)
@@ -708,7 +709,7 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 |---|---|
 | **从用户文献到研究主题 + 假设** | **本 skill(选题工坊)** |
 | 自动检索文献 + 综述 | `phd-researcher`(PRISMA/MA 流水线) |
-| 复核某假设的因果识别 | `causal-inference-architect`(已在本 skill Step 5 调用) |
+| 复核某假设的因果识别 | `vendor/causal-inference-architect/`(已在本 skill Step 5 调用) |
 | 复核用户已写好综述的引文真伪 | `citation-verifier` / `check-citations` |
 | 实证(Stata / R / Python 跑回归) | `stata-mcp` / Stata 流水线 skill |
 | 论文写作 / 投稿 | `q1-journal-polisher` / `q1-journal-reviewer` |
@@ -722,6 +723,14 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 ├── SKILL.md                              本文件
 ├── README.md                             安装 + 触发示例
 ├── LICENSE                               MIT
+├── NOTICE.md                             上游版权与传递依赖汇总(v0.3.14+)
+├── vendor/                               内置子 skill(v0.3.14+,MIT,详见各子目录 LICENSE 与 NOTICE.md)
+│   ├── LICENSE                           Nero1688 MIT 原件(v0.3.14 vendored)
+│   ├── bilingual-paper-reader/           Step 2a 读 PDF(可选增强)
+│   ├── literature-matrix-builder/        Step 2b 建文献矩阵
+│   ├── causal-inference-architect/       Step 5 因果识别(可选增强)
+│   ├── research-method-selector/         方法模板(Phase 0 引导)
+│   └── academic-humanizer/               Step 6 去 AI 味润色(v0.3.15 新增;LICENSE 见子目录)
 ├── references/
 │   ├── delivery-spec.md                 主交付规格(§3.1/3.2 反黑箱、§3.3 反黑话、§5 复跑契约)
 │   ├── anti-collapse.md                 反坍缩方法论(T-Score 分层,借鉴 Diverga MIT 的 VS)
@@ -759,6 +768,8 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ## 版本
 
+- **v0.3.15**(2026-08-13):**内置 academic-humanizer(jefeerzhang fork,MIT)**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」;`vendor/academic-humanizer/` 镜像 jefeerzhang/academic-humanizer-zh(其中 C7 中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md` 为 jefeerzhang 在 AIScientists-Dev 上游之上增量添加);SKILL.md frontmatter `name` 沿用 `academic-humanizer`(无 `-zh` 后缀,匹配 v0.3.14 vendor 命名约定);LICENSE 放 `vendor/academic-humanizer/LICENSE`(MIT,Copyright 2026 AIScientists-Dev,fork 未重署版权);NOTICE.md 新增 academic-humanizer 段,声明上游 + 上游之上游(`blader/humanizer` MIT / `koaeraser/ARMS`)三方 attribution;check-ready.sh 头改为 `[1/6]…[6/6]`,新增第 6 段 vendor probe;无 transitive deps(无 Python / 无 pip);`references/deai-checklist.md` 降级为 humanizer 润色后自查兜底。
+- **v0.3.14**(2026-08-13):**内置 4 个 Nero1688 子 skill(vendor/)+ NOTICE.md**。把"可选外部依赖"换成仓库自带 `vendor/<name>/` drop-in 副本;首次 `git clone` 即自洽可跑,无需额外 clone Nero1688 上游;`check-ready.sh` 改为 vendor-first 探测、`CLAUDE_SKILLS_DIR` 仍作高级用户外置覆盖口;MIT 合规:`vendor/LICENSE` + `NOTICE.md` 双重声明;`.gitignore` 增 `Nero1688/` 防探测期产物再提交。`SKILL.md` 4 处引用、`README.md` 安装段 / 依赖块 / 致谢、`assets/comparison.md` 第 43 行同步更新;`scripts/check_step.py` 等闸门脚本不改动(原本就不调用 sub-skill)。
 - **v0.3.13**(2026-08-13):**Step 4 三层假设闸(结论 → 金句 → 最险假设)**。提炼假设前先过三关:①结论优先测试(先写理想结论,写不出「X 与 Y 相关」式套话 = 影响不足,回 Step 3b);②单句金句(核心洞见压成一句话,能当摘要首句,与贡献类型门「揭示了什么」呼应);③最险假设 + 1-2 周可测(找出单一最可能杀死选题的假设,给 mini 验证路径)。check_step Step 4 强制含「三层假设闸」;借鉴 Carlini 结论优先测试 + researcher-pack(MIT)RS2/RS3/RS4,经管语境改写,参见 methodology-sources.md。
 - **v0.3.12**(2026-08-13):**主题对抗压测升级为 9 类坍缩攻击 + 四档生存标签**。魔鬼代言人不再自由发挥,改按经管实证语境翻译的 9 类攻击清单逐类攻击选定主题(换情境/换术语/识别/已被占/不可证伪/范围过宽/数据质量/不可行/贡献类型),每类给回应,并打 `survives / survives_if_narrowed / needs_pivot / collapses` 四档生存标签;check_step 3b 校验升级(要求生存标签 + 至少 6 类攻击名,旧格式兼容);借鉴 zhangjunhuan846-hash research-topic-selection-skill 的 8 类坍缩攻击理念 + MultiAgent-Research-Ideator 实证参数,按经管语境改写。
 - **v0.3.11**(2026-08-13):**去 AI 味固定环节**。Step 6 强制润色:已装 `academic-humanizer-zh`(MIT)则调用它,未装按新增 `references/deai-checklist.md` 六大病灶自查(套话/价值词/抽象主语/名词化/排比/元评论);顺序铁律「先翻译(反黑话)后润色(去 AI 味)」;润色只动文风,数字/引文/术语一字不改。
