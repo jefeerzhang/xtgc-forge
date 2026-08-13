@@ -306,7 +306,55 @@ def check_step6_quality(content: str) -> list[str]:
     return errors
 
 
-# 正文黑名单(反黑话):内部审计术语不得出现在主报告正文(附录 C 技术对照区允许)
+# 5 闸交互留痕校验(v0.3.9):interaction-log.md 须含 5 闸各自至少 1 条用户确认记录(原话)
+REQUIRED_GATES = ["#1", "#2", "#3", "#4", "#5"]
+
+
+def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
+    """校验 5 闸交互留痕。缺任一闸确认 → FAIL,禁止交付。
+
+    设计意图:5 闸硬暂停过去只存在于提示词里,没有任何机器证明「用户确认过」,
+    弱 Agent 可静默跳过全程。此函数让「没交互」变成可见失败,而不是静默假成功。
+    """
+    errors = []
+    log_file = workdir / "interaction-log.md"
+
+    if not log_file.exists():
+        return (
+            False,
+            [
+                "interaction-log.md 不存在。5 闸确认必须留痕(每闸一条用户原话),"
+                "否则视为未交互,禁止交付。用 init_project.py 生成模板,或补记确认记录"
+            ],
+        )
+
+    content = log_file.read_text(encoding="utf-8")
+    confirmed: dict[str, list[str]] = {}
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        # 表结构:闸门 | 状态 | 时间 | 用户原话
+        gate, status, _time, quote = cells[0], cells[1], cells[2], cells[3]
+        if "确认" not in status and "通过" not in status:
+            continue
+        if not quote or "<" in quote or "待填" in quote:
+            continue  # 占位符不算确认
+        for g in REQUIRED_GATES:
+            if re.search(rf"(?:CP)?{re.escape(g)}\b", gate):
+                confirmed.setdefault(g, []).append(quote)
+
+    missing = [g for g in REQUIRED_GATES if g not in confirmed]
+    if missing:
+        errors.append(
+            f"交互留痕不足:闸门 {', '.join(missing)} 无用户确认记录(interaction-log.md)。"
+            "5 闸须各至少 1 条用户原话;未确认的闸门 = 未交互,禁止交付"
+        )
+
+    return (len(errors) == 0, errors)
 BODY_JARGON = [
     r"GAP-[A-Za-z][0-9A-Za-z]*",  # GAP 编号
     r"\bt_score\b",  # 典型性评分
@@ -608,6 +656,9 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         ac_passed, ac_errors = check_anti_collapse(workdir_path)
         if not ac_passed:
             all_errors.extend([f"[反坍缩] {e}" for e in ac_errors])
+        il_passed, il_errors = check_interaction_log(workdir_path)
+        if not il_passed:
+            all_errors.extend([f"[交互留痕] {e}" for e in il_errors])
         for rt in ["scan", "topics"]:
             r_passed, r_errors = check_review(workdir_path, rt)
             if not r_passed:
@@ -675,6 +726,10 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
 
     if step == "6":
         errors.extend(check_step6_quality(content))
+        il_passed, il_errors = check_interaction_log(workdir_path)
+        if not il_passed:
+            errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
+            errors.extend(il_errors)
 
     # 2c 额外:至少 3 条证据来源
     if step == "2c":
