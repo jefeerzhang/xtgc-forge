@@ -6,7 +6,8 @@
 
 | 文件 | 用途 | 嵌入位置 |
 |---|---|---|
-| `pipeline.mermaid` | 6 步流水线 + 5 闸硬暂停 流程图 | `SKILL.md` 顶部 · `README.md` "30 秒看明白"区 |
+| `pipeline.mermaid` | 工作流全景图源文件：6 步流水线 + 5 闸硬暂停 + 6 道防线 + 六段式交付 | 参考源，嵌入 `README.md` 顶部 |
+| `xtgc-workflow.png` | README 顶部「选题工坊工作流」配图（豆包 Seedream 5.0 生成） | `README.md` 顶部 |
 | `checkpoint-flow.mermaid` | 5 闸硬暂停时序图(用户 ↔ Agent ↔ check_step ↔ verdict) | (待嵌入 `SKILL.md` 的"强制 5 次 Checkpoint"小节) |
 
 ## 渲染方式
@@ -23,11 +24,15 @@ GitHub 在 `.md` / `.mermaid` 文件中内置 mermaid 渲染,直接看即可。�
 ```bash
 # 一次性安装
 npm install -g @mermaid-js/mermaid-cli
+# Windows 无 Chrome 下载权限时, 指向系统浏览器:
+# $env:PUPPETEER_EXECUTABLE_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-# 转 PNG
-npx -p @mermaid-js/mermaid-cli mmdc -i pipeline.mermaid -o pipeline.png -b transparent
+# 转 PNG（时序图，透明底）
 npx -p @mermaid-js/mermaid-cli mmdc -i checkpoint-flow.mermaid -o checkpoint-flow.png -b transparent
 ```
+
+> 注：`xtgc-workflow.png`（README 顶部配图）现由豆包 Seedream 5.0 生图生成，
+> 不由此目录渲染。`pipeline.mermaid` 保留作为流程内容参考源。
 
 ## 维护原则
 

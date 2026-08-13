@@ -1,27 +1,49 @@
-%% 选题工坊 · 6 步流水线 + 5 闸硬暂停 流程图
-%% 来源:本图作为 SKILL.md 顶部嵌入图的源文件,GitHub 内置 mermaid 渲染。
+%% 选题工坊 · 工作流全景图（README v0.3.11 同步）
+%% 来源:本图作为 README 顶部 assets/xtgc-workflow.png 的源文件。
 %% 本地转 PNG:npx @mermaid-js/mermaid-cli -i pipeline.mermaid -o pipeline.png
 
 flowchart TD
-    A[Phase 0 三问启动<br/>BLOCKING 信息不齐] -->|回答齐| C1[Step 1 文献上传]
-    C1 -->|🛑 #1 文献确认| C2[Step 2a 读 PDF]
-    C2 --> D1[Step 2b 建矩阵]
-    D1 -->|🛑 #2 矩阵审阅| D2[Step 2c Gap 裁定]
-    D2 --> E1[Step 3a 候选主题]
-    E1 -->|🛑 #3 主题选择<br/>必须点名| E2[Step 3b 选定]
-    E2 --> F1[Step 4 假设提炼<br/>DAG + 反事实 + SESOI]
-    F1 -->|🛑 #4 假设确认| F2[Step 5 因果识别]
-    F2 --> G1[Step 6 交付]
-    G1 -->|🛑 #5 交付收工| G2[研究计划草稿<br/>+ 后续步骤建议]
+    IN["📥 5-50 篇 PDF + 一句话领域"] --> P0["Phase 0 三问启动<br/>BLOCKING 信息不齐"]
+    P0 -->|🛑 #1 文献确认| P1["Step 1 文献上传"]
+    P1 --> P2["Step 2a 读 PDF"]
+    P2 --> P3["Step 2b 建矩阵"]
+    P3 -->|🛑 #2 矩阵审阅| P4["Step 2c Gap 裁定"]
+    P4 --> P5["Step 3a 候选主题"]
+    P5 -->|🛑 #3 必须点名| P6["Step 3b 选定"]
+    P6 --> P7["Step 4 假设提炼<br/>DAG + 反事实 + SESOI"]
+    P7 -->|🛑 #4 假设确认| P8["Step 5 因果识别"]
+    P8 --> P9["Step 6 交付"]
+    P9 -->|🛑 #5 交付收工| OUT["★ 六段式研究计划报告<br/>题目→为何选题→意义→假设→依据→怎么做"]
 
-    style A fill:#ff6b6b,color:#fff,stroke:#c0392b
-    style C1 fill:#ffd93d,stroke:#f39c12
-    style C2 fill:#6bcf7f,stroke:#27ae60
-    style D1 fill:#6bcf7f,stroke:#27ae60
-    style D2 fill:#6bcf7f,stroke:#27ae60
-    style E1 fill:#4d96ff,color:#fff,stroke:#2980b9
-    style E2 fill:#4d96ff,color:#fff,stroke:#2980b9
-    style F1 fill:#9b59b6,color:#fff,stroke:#8e44ad
-    style F2 fill:#9b59b6,color:#fff,stroke:#8e44ad
-    style G1 fill:#95a5a6,color:#fff,stroke:#7f8c8d
-    style G2 fill:#2ecc71,color:#fff,stroke:#27ae60
+    DEF1["① 反坍缩<br/>先点名最安全题（T≥0.80）规避<br/>3 主推覆盖 ≥2 层级、≥1 个 T≤0.50"]
+    DEF2["② 贡献类型门<br/>每个候选必答「揭示了什么」<br/>答不上/抄标题 = 回炉"]
+    DEF3["③ 对抗压测（可选）<br/>魔鬼代言人出拒稿理由 + 回应"]
+    DEF4["④ 反黑箱<br/>附录 C「Gap 判定方法」<br/>五类规则 + 证据链 + 威胁文献清单"]
+    DEF5["⑤ 反黑话<br/>正文禁黑话（GAP/SESOI/Checkpoint）<br/>长句 ≤100 字，报告读得懂"]
+    DEF6["⑥ 去 AI 味<br/>humanizer 或六大病灶自查"]
+
+    P5 -. 防线 ①②③ .-> DEF1
+    P5 -.-> DEF2
+    P6 -.-> DEF3
+    P9 -.-> DEF4
+    P9 -.-> DEF5
+    P9 -.-> DEF6
+
+    style IN fill:#2ecc71,color:#fff,stroke:#27ae60
+    style P0 fill:#ff6b6b,color:#fff,stroke:#c0392b
+    style P1 fill:#ffd93d,stroke:#f39c12
+    style P2 fill:#6bcf7f,stroke:#27ae60
+    style P3 fill:#6bcf7f,stroke:#27ae60
+    style P4 fill:#6bcf7f,stroke:#27ae60
+    style P5 fill:#4d96ff,color:#fff,stroke:#2980b9
+    style P6 fill:#4d96ff,color:#fff,stroke:#2980b9
+    style P7 fill:#9b59b6,color:#fff,stroke:#8e44ad
+    style P8 fill:#9b59b6,color:#fff,stroke:#8e44ad
+    style P9 fill:#95a5a6,color:#fff,stroke:#7f8c8d
+    style OUT fill:#f39c12,color:#fff,stroke:#d68910,stroke-width:2px
+    style DEF1 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
+    style DEF2 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
+    style DEF3 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
+    style DEF4 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
+    style DEF5 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
+    style DEF6 fill:#fff,stroke:#4d96ff,stroke-dasharray:3
