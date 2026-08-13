@@ -28,10 +28,10 @@ else
     echo "     安装:https://code.claude.com/docs/en/skills"
     exit 1
 fi
-
-# 2. 检查 Nero1688 子 skill 是否装
+# 2. 检查 Nero1688 子 skill 是否装（可选依赖，不阻塞主路径）
 echo ""
-echo "[2/4] 检查 Nero1688 4 个核心子 skill(目录:$SKILLS_DIR)..."
+echo "[2/4] 检查 Nero1688 4 个核心子 skill(可选,目录:$SKILLS_DIR)..."
+
 EXPECTED_SKILLS=("bilingual-paper-reader" "literature-matrix-builder" "research-method-selector" "causal-inference-architect")
 
 MISSING=()
@@ -39,14 +39,16 @@ for skill in "${EXPECTED_SKILLS[@]}"; do
     if [ -d "$SKILLS_DIR/$skill" ]; then
         echo "  ✅ $skill 已装"
     else
-        echo "  ❌ $skill 未装"
+        echo "  ⚠️  $skill 未装(可选)"
         MISSING+=("$skill")
     fi
 done
 
 if [ ${#MISSING[@]} -gt 0 ]; then
     echo ""
-    echo "  ⚠️  缺失 ${#MISSING[@]} 个子 skill,补装方法(任选其一):"
+    echo "  ⚠️  缺失 ${#MISSING[@]} 个子 skill —— 可选依赖,不阻塞主路径"
+    echo "     选题工坊默认走自写路径(文字层抽取 + 本 skill 自写矩阵/Gap/主题/假设/主报告)。"
+    echo "     需要增强能力时的补装方法(任选其一):"
     echo ""
     echo "  方法 A · 从上游仓库拷贝:"
     echo "     git clone --depth 1 https://github.com/Nero1688/claude-academic-skills.git /tmp/cas"
@@ -56,7 +58,6 @@ if [ ${#MISSING[@]} -gt 0 ]; then
     echo ""
     echo "  方法 B · 用 npx skills(若上游已注册):"
     echo "     npx skills add Nero1688/claude-academic-skills"
-    exit 1
 fi
 
 # 3. 检查选题工坊自身(按脚本所在目录定位,不写死路径)
