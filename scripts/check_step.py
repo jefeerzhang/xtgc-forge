@@ -129,6 +129,10 @@ PLACEHOLDER_PATTERNS = [
     r"<请填写",
     r"<YYYY-MM-DD>",
     r"<研究主题>",
+    # 通用中文占位符:<中文...>(如 <用户文献目录> / <候选主题标题> / <来源 Gap 编号> /
+    # <具体哪几篇文献> / <这个题揭示了什么?禁止与标题雷同> / <推断性研究才填> 等,
+    # 全部来自 init_project.py 生成的模板,填充前不得通过闸门)
+    r"<[\u4e00-\u9fff][^>]*>",
     r"\bTODO\b",
     r"\bTBD\b",
     r"（待填）",
@@ -238,6 +242,20 @@ def check_placeholders(content: str, label: str) -> list[str]:
     return errors
 
 
+def _resolve_workdir_file(workdir: Path, filename: str) -> Path:
+    """按「根目录 → process/ 子目录」顺序解析工作目录产物文件路径。
+
+    金样例把 Step*/topic_scores/review_* 放在 process/ 子目录(主交付 00_* 在根),
+    脚本历史上只查根目录,导致已存在的过程文件无法复验。此 helper 统一回退:
+    根目录有则用根目录,否则回退 process/,两者皆无则返回根目录路径(由调用方报错)。
+    """
+    root = workdir / filename
+    if root.exists():
+        return root
+    sub = workdir / "process" / filename
+    return sub if sub.exists() else root
+
+
 def check_step6_quality(content: str) -> list[str]:
     """Step 6 主报告质量闸(防空壳)。"""
     errors = []
@@ -317,7 +335,7 @@ def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
     弱 Agent 可静默跳过全程。此函数让「没交互」变成可见失败,而不是静默假成功。
     """
     errors = []
-    log_file = workdir / "interaction-log.md"
+    log_file = _resolve_workdir_file(workdir, "interaction-log.md")
 
     if not log_file.exists():
         return (
@@ -378,7 +396,7 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     2. 00_复跑决策记录.md 存在但只有模板/占位符(无当次原话、无时间)→ FAIL(空壳拦截)
     """
     errors = []
-    rerun_file = workdir / "00_复跑决策记录.md"
+    rerun_file = _resolve_workdir_file(workdir, "00_复跑决策记录.md")
     main_report = main_report_path.read_text(encoding="utf-8") if main_report_path.exists() else ""
 
     # 只认声明位:复跑说明 / 本复跑 / 附录F 表行「| 复跑 |」;「需复跑核实」等提及不算
@@ -499,7 +517,7 @@ def check_readability(content: str) -> list[str]:
 def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
     """校验 topic_scores.json。"""
     errors = []
-    score_file = workdir / "topic_scores.json"
+    score_file = _resolve_workdir_file(workdir, "topic_scores.json")
 
     if not score_file.exists():
         return (False, ["topic_scores.json 不存在,请用 init_project.py 创建或手动生成"])
@@ -590,7 +608,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
        全落安全层即「选题坍缩」→ FAIL,退回 Phase 2 重生成。
     """
     errors = []
-    score_file = workdir / "topic_scores.json"
+    score_file = _resolve_workdir_file(workdir, "topic_scores.json")
     if not score_file.exists():
         return (False, ["topic_scores.json 不存在,无法做反坍缩校验"])
 
@@ -654,7 +672,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
 def check_review(workdir: Path, target: str) -> tuple[bool, list[str]]:
     """校验 review_{target}.md 是否 PASS。"""
     errors = []
-    review_file = workdir / f"review_{target}.md"
+    review_file = _resolve_workdir_file(workdir, f"review_{target}.md")
 
     if not review_file.exists():
         return (
@@ -715,7 +733,7 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         il_passed, il_errors = check_interaction_log(workdir_path)
         if not il_passed:
             all_errors.extend([f"[交互留痕] {e}" for e in il_errors])
-        main_report = workdir_path / "00_研究计划报告.md"
+        main_report = _resolve_workdir_file(workdir_path, "00_研究计划报告.md")
         if main_report.exists():
             rr_passed, rr_errors = check_rerun_record(workdir_path, main_report)
             if not rr_passed:
@@ -742,11 +760,11 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         return (False, [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"])
 
     rule = GATES[step]
-    file_path = workdir_path / rule["file"]
+    file_path = _resolve_workdir_file(workdir_path, rule["file"])
     errors = []
 
     if not file_path.exists():
-        return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}"])
+        return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}(根目录与 process/ 均未找到)"])
 
     content = file_path.read_text(encoding="utf-8")
     lines = content.splitlines()

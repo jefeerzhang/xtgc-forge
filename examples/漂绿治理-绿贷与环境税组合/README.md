@@ -30,10 +30,16 @@
 ## 校验
 
 ```bash
+# 主报告闸（必须 PASS）
 python scripts/check_step.py --workdir examples/漂绿治理-绿贷与环境税组合 --step 6
+
+# 过程文件复验（v0.3.16 起支持 process/ 子目录回退，逐一校验）
+python scripts/check_step.py --workdir examples/漂绿治理-绿贷与环境税组合 --step 2c
+python scripts/check_step.py --workdir examples/漂绿治理-绿贷与环境税组合 --step scores
 ```
 
-> 注：金样例目录若缺 Step2a/5/review，`--step all` 可能 FAIL；**Step 6 主报告闸必须 PASS**。完整过程包见实测目录 `outputs/漂绿与金融市场风险/`。
+> 注：`check_step.py` 按「根目录 → `process/` 子目录」顺序查找产物文件，因此本样例 `process/` 下的 Step1/2b/2c/3a/3b/4 与 topic_scores.json 均可直接复验。
+> 金样例目录**有意缺省** Step2a/Step5/两个 review 文件（精简过程包），故 `--step all` 仍会 FAIL——这是预期，不是损坏；**Step 6 主报告闸必须 PASS**。
 
 ## 文献来源说明
 

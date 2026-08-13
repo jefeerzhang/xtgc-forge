@@ -240,7 +240,7 @@ bash check-ready.sh
 ├── check-ready.sh                        就绪检查脚本
 ├── test-prompts.json                     固化测试样例（3 条）
 ├── scripts/                              init/check/review 闸门脚本
-└── outputs/                              当前运行的中间文件
+└── outputs/                              本地运行的中间文件（.gitignore 排除，不入库）
 ```
 
 ## 实测案例
