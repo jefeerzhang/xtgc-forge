@@ -3,6 +3,27 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.17 · 2026-08-13 · 审稿反馈闭环 + 发布通道归档
+
+**主线**:对 v0.3.16 改动跑了一次双轴 code-review(`code-review` skill,Standards + Spec 并行子代理),收口 4 处遗留 + 归档发布通道。本版不是新功能,是 v0.3.16 的边角收口与对外发布准备。
+
+1. **断链修复字面闭合(A1)**:v0.3.16 §4 承诺「金样例 README 引用的 `outputs/漂绿与金融市场风险/` → 真实存在的 `process/`」,改了 README 与主报告,但 `process/Step1-input.md:3` 仍写「工作目录 `outputs/漂绿与金融市场风险`」,字面承诺未完全闭合。本次把该行改成「复盘归位 · 工作目录 `process/`」并加注释说明 v0.3.16 起过程文件统一进 process/、根目录仅留主交付;`check_step --step 1` 仍 PASS,`--step all` 失败项数与 v0.3.16 持平(4 项,均为有意缺省)
+
+2. **发布通道归档(B1)**:c2278d0「feat(发布通道): 添加 plugin marketplace 元数据」新增 `.claude-plugin/marketplace.json`(Claude Plugin Marketplace 字段规范全合规:plugins[*].name/source/description/version/keywords/homepage/license/skills),但 v0.3.16 CHANGELOG 6 条承诺与 SKILL.md `## 版本` v0.3.16 段(①②③④)均未提及,属「借版本打包发布通道」。本次显式归档:`description` 同步修正 6 道防线口径(详见 §3);SKILL.md `## 版本` v0.3.16 段补 ⑤「新增 `.claude-plugin/marketplace.json`,声明发布通道元数据」
+
+3. **「6 道防线」口径对齐(A2 + Standards #1)**:`marketplace.json` 原 description 写「6 道防线(... / 9 类对抗压测)」,把 v0.3.12 内的「9 类攻击清单数」当防御名,与 SKILL.md「对抗压测(可选增强,不新增硬闸)」口径不一致。本次改成「对抗压测·9 类攻击清单·可选增强」,明文标「可选」,防止从 marketplace 安装的用户误为硬约束
+
+4. **占位符正则收紧(C1 + Standards #4)**:`scripts/check_step.py` 原通用匹配 `r"<[\u4e00-\u9fff][^>]*>"` 1 字起步,会误判合法正文「用户 <文献> 目录」「<中文摘要>」等。本次收紧为双层:
+   - **通用**:4 汉字起步 `r"<[一-鿿]{4,}[^>]*>"`,过滤掉 1-3 字尖括号(`<文献>`/`<用户>`/`<什么>`/`<中文>`)
+   - **关键词白名单兜底**:覆盖 `<来源 Gap 编号>` / `<Gap 编号>` / `<研究类型 标签>` / `<填这里>` 等 1-3 字或含空格/Gap 的混合占位符(15 个 init 模板家族关键词)
+   - 实测 init 模板 12 个占位符全部命中、金样例全部 clean;仍存在的 corner case:4 字以上纯描述性尖括号(如 `<中文摘要>` `<显著水平>`)会被拦,建议改写成「中文摘要」「显著水平」(无尖括号),CHANGELOG 在此注明 trade-off
+
+5. **不破坏**:`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review,均为金样例有意缺省);Step 6 主报告闸仍 PASS;`process/` 子目录回退、占位符拦截、五道防线、`check_step.py` 自身闸门逻辑全部保留;`_resolve_workdir_file` 行为不变(主报告 `00_研究计划报告.md` 仍走「根目录 → process/」回退,与 v0.3.16 一致)
+
+6. **版本**:SKILL.md frontmatter `version: "0.3.16"` → `"0.3.17"` + 标题 + README 版本徽章 + CHANGELOG 顶部;`check-ready.sh` 自取 frontmatter(自动跟随)
+
+---
+
 ## v0.3.16 · 2026-08-13 · 金样例可复验性加固(占位符闸门补漏 + process/ 布局兼容)
 
 **主线**:金样例是「Agent 应模仿的完成态」,但它本身不可复验——主报告附录 F 残留模板占位符、过程文件放进 `process/` 子目录后闸门脚本全部报「文件不存在」、README 还指向一个被 `.gitignore` 排除、仓库里从未存在的 `outputs/` 目录。本次把这三处一起收口:占位符闸门从「枚举拦截」升级为「通用拦截」,脚本文件解析支持 `process/` 子目录回退,文档引用对齐真实仓库。

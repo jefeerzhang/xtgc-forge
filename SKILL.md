@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.16"
+version: "0.3.17"
 license: MIT
 ---
 
-# 选题工坊 v0.3.16
+# 选题工坊 v0.3.17
 
 ## 📊 流水线一览(图)
 
@@ -768,7 +768,8 @@ PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
 
 ## 版本
 
-- **v0.3.16**(2026-08-13):**金样例可复验性加固**。①占位符闸门补漏:新增通用模式 `<[\u4e00-\u9fff][^>]*>`,覆盖 init 模板 `<中文...>` 占位符家族(原枚举 3 个模式漏掉 20+ 个);②清除金样例 3 处 `<用户文献目录>` 占位残留(主报告附录 F / Step1-input / 旧样例 Step2a OCR 目录树);③`check_step.py` 新增 `_resolve_workdir_file()` helper,产物文件按「根目录 → process/ 子目录」回退解析,金样例 `process/` 下 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验,`--step all` 失败项 12 → 4(仅缺省 Step2a/5/review);④金样例 README 断链修复(`outputs/漂绿与金融市场风险/` 不存在 → 指向 `process/`),主 README `outputs/` 注明不入库。
+- **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 改动跑了一次双轴 `code-review` 审查(Standards + Spec 并行子代理),收口 4 处遗留 + 归档发布通道。①[A1 断链修复字面闭合]`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺才算闭合);②[A2 / Standards #1 防线口径对齐]`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,从 marketplace 安装的用户不会误为硬约束;③[C1 / Standards #4 占位符正则收紧]`check_step.py` 通用匹配 `r"<[\u4e00-\u9fff][^>]*>"`(1 字起步)→ 双层:`r"<[一-鿿]{4,}[^>]*>"`(4 汉字起步)+ 关键词白名单兜底 1-3 字 / 含空格/Gap 混合占位符,过滤掉合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 等;④[B1 发布通道归档]`marketplace.json` 字段全合规但 v0.3.16 CHANGELOG 漏归档,本次显式记入(本行 ⑤)。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review,均为金样例有意缺省),Step 6 主报告闸仍 PASS。
+- **v0.3.16**(2026-08-13):**金样例可复验性加固**。①占位符闸门补漏:新增通用模式 `<[\u4e00-\u9fff][^>]*>`,覆盖 init 模板 `<中文...>` 占位符家族(原枚举 3 个模式漏掉 20+ 个);②清除金样例 3 处 `<用户文献目录>` 占位残留(主报告附录 F / Step1-input / 旧样例 Step2a OCR 目录树);③`check_step.py` 新增 `_resolve_workdir_file()` helper,产物文件按「根目录 → process/ 子目录」回退解析,金样例 `process/` 下 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验,`--step all` 失败项 12 → 4(仅缺省 Step2a/5/review);④金样例 README 断链修复(`outputs/漂绿与金融市场风险/` 不存在 → 指向 `process/`),主 README `outputs/` 注明不入库。⑤新增 `.claude-plugin/marketplace.json`,声明 Claude Plugin Marketplace 发布通道元数据(name/source/description/version/keywords/homepage/license/skills)。
 - **v0.3.15**(2026-08-13):**内置 academic-humanizer(jefeerzhang fork,MIT)**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」;`vendor/academic-humanizer/` 镜像 jefeerzhang/academic-humanizer-zh(其中 C7 中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md` 为 jefeerzhang 在 AIScientists-Dev 上游之上增量添加);SKILL.md frontmatter `name` 沿用 `academic-humanizer`(无 `-zh` 后缀,匹配 v0.3.14 vendor 命名约定);LICENSE 放 `vendor/academic-humanizer/LICENSE`(MIT,Copyright 2026 AIScientists-Dev,fork 未重署版权);NOTICE.md 新增 academic-humanizer 段,声明上游 + 上游之上游(`blader/humanizer` MIT / `koaeraser/ARMS`)三方 attribution;check-ready.sh 头改为 `[1/6]…[6/6]`,新增第 6 段 vendor probe;无 transitive deps(无 Python / 无 pip);`references/deai-checklist.md` 降级为 humanizer 润色后自查兜底。
 - **v0.3.14**(2026-08-13):**内置 4 个 Nero1688 子 skill(vendor/)+ NOTICE.md**。把"可选外部依赖"换成仓库自带 `vendor/<name>/` drop-in 副本;首次 `git clone` 即自洽可跑,无需额外 clone Nero1688 上游;`check-ready.sh` 改为 vendor-first 探测、`CLAUDE_SKILLS_DIR` 仍作高级用户外置覆盖口;MIT 合规:`vendor/LICENSE` + `NOTICE.md` 双重声明;`.gitignore` 增 `Nero1688/` 防探测期产物再提交。`SKILL.md` 4 处引用、`README.md` 安装段 / 依赖块 / 致谢、`assets/comparison.md` 第 43 行同步更新;`scripts/check_step.py` 等闸门脚本不改动(原本就不调用 sub-skill)。
 - **v0.3.13**(2026-08-13):**Step 4 三层假设闸(结论 → 金句 → 最险假设)**。提炼假设前先过三关:①结论优先测试(先写理想结论,写不出「X 与 Y 相关」式套话 = 影响不足,回 Step 3b);②单句金句(核心洞见压成一句话,能当摘要首句,与贡献类型门「揭示了什么」呼应);③最险假设 + 1-2 周可测(找出单一最可能杀死选题的假设,给 mini 验证路径)。check_step Step 4 强制含「三层假设闸」;借鉴 Carlini 结论优先测试 + researcher-pack(MIT)RS2/RS3/RS4,经管语境改写,参见 methodology-sources.md。

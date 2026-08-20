@@ -9,7 +9,7 @@
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version: v0.3.16](https://img.shields.io/badge/Version-v0.3.16-blue)](CHANGELOG.md)
+[![Version: v0.3.17](https://img.shields.io/badge/Version-v0.3.17-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
@@ -280,6 +280,7 @@ MIT（可商用、可改编）。
 
 ## 版本
 
+- **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 跑双轴 `code-review`,收口 4 处遗留 + 归档发布通道。①`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺闭合);②`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,防线口径与 SKILL.md 对齐;③占位符正则从 1 字起步(`<[一-鿿][^>]*>`)收紧为 4 字起步 + 关键词白名单兜底,过滤合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 误报;④`marketplace.json` 字段全合规但 v0.3.16 漏归档,本次显式记入。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review 有意缺省),Step 6 主报告闸仍 PASS。
 - **v0.3.16**（2026-08-13）：**金样例可复验性加固**。占位符闸门补漏（新增通用 `<中文>` 占位模式，原枚举 3 个漏掉 init 模板 20+ 个）；清除金样例 3 处 `<用户文献目录>` 占位残留；`check_step.py` 支持 `process/` 子目录回退，金样例过程文件 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验（`--step all` 失败项 12 → 4，仅缺省 Step2a/5/review）；金样例 README 断链修复（`outputs/漂绿与金融市场风险/` → `process/`）。
 - **v0.3.15**（2026-08-13）：**内置 academic-humanizer（jefeerzhang fork）**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」；`vendor/academic-humanizer/` 镜像 jefeerzhang fork，包含上游 AIScientists-Dev 的英文规则 + fork 增量添加的中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md`；LICENSE 放子目录（`vendor/academic-humanizer/LICENSE`，MIT Copyright 2026 AIScientists-Dev）；`NOTICE.md` 新增独立段声明上游 + 上游之上游（`blader/humanizer` / `koaeraser/ARMS`）三方 attribution；`check-ready.sh` 加 vendor probe，头部 `[1/5]→[1/6]`；无 transitive deps（无 Python / 无 pip）；`references/deai-checklist.md` 同步降级为 humanizer 兜底。
 - **v0.3.14**（2026-08-13）：**内置 4 个 Nero1688 子 skill**（`vendor/<name>/` drop-in，MIT）。把「可选外部依赖」换成仓库自带副本，首次 `git clone` 即自洽可跑，无需额外 clone Nero1688 上游；`check-ready.sh` 改为 vendor-first 探测，`CLAUDE_SKILLS_DIR` 仍作外置覆盖口；MIT 合规：`vendor/LICENSE` + `NOTICE.md` 双重声明；`.gitignore` 增 `Nero1688/`。SKILL.md 4 处引用、依赖块、致谢、`assets/comparison.md` 第 43 行同步更新；`scripts/check_step.py` 等闸门脚本不改动（原本就不调用 sub-skill）。
