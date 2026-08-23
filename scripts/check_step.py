@@ -510,10 +510,13 @@ def _strip_md_structure(text: str) -> str:
         # 列表行:去列表标记,保留内容
         out.append(re.sub(r"^([-*]\s|\d+\.\s)", "", stripped))
     joined = "\n".join(out)
-    # 去行内 markdown 符号,避免计数字符虚高。
-    # 仅剥离「字边界处」的 * / ` / _(如行首缩进强调、行尾参考链接)，
-    # 单词中间的 snake_case、x*2、4*5 这类不被吞掉。
-    return re.sub(r"(?:^|\s)[`*_]+(?:\s|$)", " ", joined)
+    # 去行内 markdown 符号,避免断句闸句长虚高。
+    # * 与 ` 无条件剥离:中文强调常紧贴汉字(如「**重点**」),两侧无空白,
+    # 边界判定会漏剥,残留的 * 会计入句长;_ 见下行规则(保留 snake_case)。
+    joined = re.sub(r"[`*]", "", joined)
+    # _ 只剥「不夹在两个单词字符中间」的:snake_case 的 _ 两侧都是 [A-Za-z0-9] 保留;
+    # _斜体_ / 行首 _ 这类挨着空白或汉字的标记剥离。
+    return re.sub(r"(?<![A-Za-z0-9])_+|_+(?![A-Za-z0-9])", " ", joined)
 
 
 def check_readability(content: str) -> list[str]:
@@ -723,8 +726,6 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
 #   status=FAIL   有硬错(verdict 字段缺失、值非法)
 # 调用方应只把 status=FAIL 视为阻塞;WARN 仅打印提示,不阻塞 --step all
 REVIEW_VALID_VERDICTS = {"PASS", "P0_OPEN", "FAIL", "NEEDS_HUMAN"}
-# 由 REVIEW_VALID_VERDICTS 派生,保证 verdict 正则与合法集合单一真源
-_VERDICT_ALT = "|".join(sorted(REVIEW_VALID_VERDICTS))
 
 
 def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]:
@@ -749,10 +750,11 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     content = review_file.read_text(encoding="utf-8")
 
     # ----- 硬错:verdict 字段本身有问题 -----
-    # 锚定到合法 token 集合(_VERDICT_ALT 由 REVIEW_VALID_VERDICTS 派生),避免把
-    # "verdict: PASS,继续" 这种自然中文写法里的 "PASS,继续" 整体捕获下来再判非法。
+    # 两段式:先宽捕获 verdict 值(在空白/中英文句读/markdown 符号处截断,
+    # 避免把 "verdict: PASS,继续" 里的 ",继续" 一起吃进来),再校验合法集合。
+    # 这样非法值(如 verdict: MAYBE)能报出「值 X 不在合法集合」,而不是误报「缺少字段」。
     verdict_row = re.search(
-        r"verdict\s*:\s*\**\s*\`?(?P<v>" + _VERDICT_ALT + r")\b",
+        r"verdict\s*:\s*\**\s*\`?([^\s,，;；。\*\`]+)",
         content,
         re.IGNORECASE,
     )
@@ -762,7 +764,7 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
         )
         return ("FAIL", hard_errors, soft_warnings)
 
-    verdict = verdict_row.group("v").upper()
+    verdict = verdict_row.group(1).upper()
     if verdict not in REVIEW_VALID_VERDICTS:
         hard_errors.append(
             f"verdict 值 {verdict!r} 不在合法集合 {{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}} 内(v0.3.18 起需要写明 verdict 类型)"

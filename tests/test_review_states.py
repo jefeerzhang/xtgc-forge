@@ -40,6 +40,10 @@ def test_invalid_verdict_fails():
     try:
         status, hard, soft = check_step.check_review(Path(td.name), "scan")
         assert status == "FAIL"
+        # 两段式捕获:非法值应报「值 'MAYBE' 不在合法集合」,而不是误报「缺少 verdict 字段」
+        assert any("MAYBE" in e and "不在合法集合" in e for e in hard), (
+            f"非法 verdict 应报出具体值,实际:\n{hard}"
+        )
     finally:
         td.cleanup()
 
