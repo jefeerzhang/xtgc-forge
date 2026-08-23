@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.19"
+version: "0.3.20"
 license: MIT
 ---
 
-# 选题工坊 v0.3.19
+# 选题工坊 v0.3.20
 
 ## 📊 流水线一览(图)
 
@@ -723,6 +723,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 - **内置子 skill**(MIT):v0.3.14 起随仓库发布,不阻塞主路径;详见各 vendor 子目录的 `LICENSE` 与 `NOTICE.md`
   - **Nero1688 上游**(位于 `vendor/<name>/`,Nero1688 MIT 详见 `vendor/LICENSE`):`vendor/bilingual-paper-reader/` · `vendor/literature-matrix-builder/` · `vendor/causal-inference-architect/` · `vendor/research-method-selector/`
   - **jefeerzhang fork(AIScientists-Dev 上游)**(位于 `vendor/academic-humanizer/`,MIT 详见该子目录 `LICENSE`;v0.3.15 新增)
+  - **jnMetaCode 上游(superpowers-zh)**(位于 `vendor/chinese-commit-conventions/`、`vendor/chinese-documentation/`,MIT 详见各子目录 `LICENSE`;v0.3.20 新增,中文 commit 规范与中文文档排版参考,可选增强)
 - **默认路径**:文字层抽取 PDF + 本 skill 自写矩阵/Gap/主题/假设/主报告
 - **去 AI 味润色(Step 6 固定环节,非阻塞)**:优先调用 `academic-humanizer`(jefeerzhang fork, MIT, AIScientists-Dev 上游;内置于 `vendor/academic-humanizer/`,本仓库 v0.3.15+ 自带);vendor 缺失时按 `references/deai-checklist.md` 自查兜底。反黑话翻译在前、润色在后
 - **不依赖**:`open-science-skills`(CC BY-NC 4.0)
@@ -759,7 +760,9 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 │   ├── literature-matrix-builder/        Step 2b 建文献矩阵
 │   ├── causal-inference-architect/       Step 5 因果识别(可选增强)
 │   ├── research-method-selector/         方法模板(Phase 0 引导)
-│   └── academic-humanizer/               Step 6 去 AI 味润色(v0.3.15 新增;LICENSE 见子目录)
+│   ├── academic-humanizer/               Step 6 去 AI 味润色(v0.3.15 新增;LICENSE 见子目录)
+│   ├── chinese-commit-conventions/       中文 commit 规范参考(v0.3.20 新增;可选增强)
+│   └── chinese-documentation/            中文文档排版参考(v0.3.20 新增;可选增强)
 ├── references/
 │   ├── delivery-spec.md                 主交付规格(§3.1/3.2 反黑箱、§3.3 反黑话、§5 复跑契约)
 │   ├── anti-collapse.md                 反坍缩方法论(T-Score 分层,借鉴 Diverga MIT 的 VS,同 §反坍缩机制,见上)

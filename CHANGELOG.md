@@ -3,6 +3,22 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.20 · 2026-08-23 · 内置 2 个 superpowers-zh 子 skill(vendor + NOTICE + check-ready 加项)
+
+**主线**:v0.3.14 起的 vendor/ 协议,把"学术工作流直接相关"作为收口边界——但仓库外还有两类中文场景的子 skill 没有覆盖:**中文 commit 规范**(`chinese-commit-conventions`)+ **中文文档排版**(`chinese-documentation`),都来自 [jnMetaCode/superpowers-zh](https://github.com/jnMetaCode/superpowers-zh)(MIT,Copyright 2026 jnMetaCode)。它们与本 skill 是同族而非替代:本 skill 产出"研究计划报告",`chinese-documentation` 产出"中文写作规范"。补齐这两类之后,Skill spec → Python script → 黄金样例 → 中文排版规范四者形成闭环,首次 `git clone` 即自洽可跑,无需额外 clone 任何外部 skill 仓库。
+
+1. **布局**:`vendor/chinese-commit-conventions/` + `vendor/chinese-documentation/` 各 drop-in `SKILL.md` + `LICENSE`(MIT 源 LICENSE 单文件随 2 个子目录各复制一份,与 v0.3.15 academic-humanizer 模式相同,便于每 vendored 子 skill 单独合规审计);`vendor/` 总目录 LICENSE 不变(Nero1688 MIT 仅覆盖 4 个 Nero1688 skill,不覆盖 jnMetaCode 上游)
+2. **命名**:2 个子 skill SKILL.md frontmatter `name` 与 `vendor/<name>/` 目录名 1:1 对齐(`chinese-commit-conventions` / `chinese-documentation`),与 v0.3.14 命名约定一致
+3. **法务**:`vendor/<name>/LICENSE` 各持一份 jnMetaCode MIT;`NOTICE.md` 新增独立段,声明 jnMetaCode 上游 + 2 个子 skill 用途 + 无传递依赖;原 3 段(Nero1688 上游 / CrossRef polite pool / academic-humanizer fork)全部保留;`§(c) 合规声明`LICENSE 列表由 2 项 → 4 项
+4. **探测**:`check-ready.sh` `EXPECTED_SKILLS` 数组 5 → 7 项(`bilingual-paper-reader literature-matrix-builder research-method-selector causal-inference-architect academic-humanizer chinese-commit-conventions chinese-documentation`);头部计数 `[2/6]` 不动(6 是 6 个 phase 数,与 skill 数无关),但 phase 2 描述「检查 5 个内置子 skill」→「检查 7 个内置子 skill」
+5. **文档**:`SKILL.md` 协议段增加 jnMetaCode 上游 bullet(子 list 形式,缩进与 Nero1688 / humanizer 平级);文件结构树加 2 行 `vendor/chinese-commit-conventions/` + `vendor/chinese-documentation/`,标注 `v0.3.20 新增;可选增强`;`README.md` Vendored 徽章 `5 sub-skills` → `7 sub-skills`,「30 秒看明白」「与同类最大不同」「何时需要它」三处文案对齐 5 → 7,致谢段追加 jnMetaCode 上游链接;`README.md` 「版本」段补回 v0.3.19 / v0.3.20 两条(badge + CHANGELOG 段已对齐,README 历史段补齐)
+6. **触发条件**:**两个新 skill 均不自动触发**,仅在用户显式输入 `/chinese-commit-conventions` / `/chinese-documentation` 时调用——与本 skill 的「强制 5 次 Checkpoint 硬暂停」纪律兼容,不会被 agent 自作主张引入
+7. **不破坏**:5 个 Checkpoint / 6 道防线 / 六段式主报告闸 / 反坍缩·反黑箱·反黑话·去 AI 味 / 流程图 / `--step 6` 与 `--step all` 在黄金样例上的结果全部保留;`check_step.py` 闸门脚本零改动(原本就不调用 sub-skill,新 vendor skill 同理是「可选增强,不阻塞主路径」)
+8. **版本**:SKILL.md frontmatter `version: "0.3.19"` → `"0.3.20"` + 标题 + README Version badge + `.claude-plugin/marketplace.json`(metadata.version + plugins[*].version)+ CHANGELOG 顶部 + `check-ready.sh` 自取 frontmatter(自动跟随)
+9. **升级路径**(给维护者):`git pull` jnMetaCode 上游 → `cp -r upstream/skills/chinese-commit-conventions/* vendor/chinese-commit-conventions/` + `cp -r upstream/skills/chinese-documentation/* vendor/chinese-documentation/`(覆盖,但需手工剔除上游新增 assets/)→ 校验 SKILL.md frontmatter `name` 仍为 `chinese-commit-conventions` / `chinese-documentation`(不要被上游改名)→ 跑 check-ready 对账
+
+---
+
 ## v0.3.19 · 2026-08-23 · 三轮 code review 收口 51 项(规范-脚本-样例闭环)
 
 **主线**:v0.3.18 的"诚实化运动"让规范对用户说真话,但仓库自己还有大量「规范说一套,代码做另一套」的不一致——spec 上写 Checkpoint #5 在 Step 6 之前,文本流程图却写在 Step 6 之后;verdict 正则会贪婪吃掉中文句读,`verdict: PASS,继续` 被静默判 FAIL;`init_project.py` 只要 `00_任务元信息.md` 不在就静默覆盖已写的 Step 1–5;SKILL.md 文件树列出两个 vendor 子 skill 但 Step 2a/Phase 0 正文从没调用它们。这些 latent 问题让「Skill 写一套对的事,Agent 跑出另一套对的事」同时成立,用户被骗不动但结果不可信。本次对仓库做三轮 code review(规范 / 脚本 / 样例,三个并行的 general-purpose agent),收口 51 项,效果是把 Skill spec、Python script、黄金样例三者之间的所有关键路径都用测试和样例内容实际覆盖,事后任何一处规范说「应如此」都在代码或样例里有对应证据。

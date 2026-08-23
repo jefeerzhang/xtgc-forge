@@ -9,9 +9,9 @@
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version: v0.3.19](https://img.shields.io/badge/Version-v0.3.19-blue)](CHANGELOG.md)
+[![Version: v0.3.20](https://img.shields.io/badge/Version-v0.3.20-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
-[![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
+[![Vendored: 7 sub-skills (MIT)](https://img.shields.io/badge/Vendored-7%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
 [![Anti-Blackbox: Gap 判定方法](https://img.shields.io/badge/Anti--Blackbox-Gap%20判定方法-green)](references/delivery-spec.md#31-附录-c-的gap-判定方法段反黑箱v035)
 [![Anti-Jargon: 黑话+断句](https://img.shields.io/badge/Anti--Jargon-黑话%2B断句-orange)](references/delivery-spec.md#33-可读性层术语翻译--断句反黑话v038)
@@ -24,7 +24,7 @@
 ```
 📚 你的 5–50 篇 PDF + 一句话模糊领域
         ↓
-🛠  6 步流水线(vendor/ 内置 5 个子 skill):
+🛠  6 步流水线(vendor/ 内置 7 个子 skill):
     读 PDF → 建矩阵 → 找 gap → 出主题 → 提假设 → 设计识别
         ↓
 🔒 5 个硬闸(每次暂停,你点头才能过)
@@ -32,7 +32,7 @@
 📄 1 份六段式研究计划报告(00_研究计划报告.md)
 ```
 
-**与同类最大的不同**:**仓库自带** `vendor/` 5 个 MIT 子 skill(bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector / academic-humanizer),`git clone` 即自洽可跑,不依赖任何外部检索或额外安装。
+**与同类最大的不同**:**仓库自带** `vendor/` 7 个 MIT 子 skill(bilingual-paper-reader / literature-matrix-builder / causal-inference-architect / research-method-selector / academic-humanizer / chinese-commit-conventions / chinese-documentation),`git clone` 即自洽可跑,不依赖任何外部检索或额外安装。
 
 ## 你什么时候需要它
 
@@ -40,7 +40,7 @@
 你有 5-50 篇 PDF + 一句话领域
    ↓
 [ 6 步流水线：读 → 矩阵 → gap → 主题 → 假设 → 识别 ]
-       └─ vendor/ 内置 5 个子 skill 直接调用，无需外部安装
+       └─ vendor/ 内置 7 个子 skill 直接调用，无需外部安装
    ↓
 5 个硬闸（流程停顿点，你拍板）↔ 6 道防线（质量机制，机器把关）
    ↓
@@ -281,6 +281,8 @@ MIT（可商用、可改编）。
 
 ## 版本
 
+- **v0.3.20**(2026-08-23):**内置 2 个 superpowers-zh 子 skill**(来自 [jnMetaCode/superpowers-zh](https://github.com/jnMetaCode/superpowers-zh),MIT)。`vendor/chinese-commit-conventions/`(中文 commit / changelog 规范、commitlint + husky 配置)与 `vendor/chinese-documentation/`(中文技术文档排版参考,中英文空格 / 全半角标点 / 中文文案排版指北)从「可选外部依赖」升级为「仓库自带副本」;`check-ready.sh` `EXPECTED_SKILLS` 数组 5 → 7 项;`NOTICE.md` 新增 superpowers-zh 段,沿用 academic-humanizer 模式(每 vendored 子 skill 单持一份 MIT LICENSE)。两个子 skill 均不自动触发,需用户显式调用对应斜杠命令。
+- **v0.3.19**(2026-08-23):**三轮 code review 收口 51 项**(技能规范 / Python 脚本 / 黄金样例三项并行审计)。9 项阻塞(Checkpoint #5 流程图对齐、`verdict` 中文贪婪正则、`init_project.py` 静默覆盖、`--workdir ~` 解析、v0.2.X 变更日志去重、L281「用户决策」歧义、黄金样例 Step3b 2→9 类对抗压测、恢复 Step5 独立文件、vendor 子 skill 接线)+ 21 项重要(规范 9 项补 复跑/grill-me/T-Score/确认定义/对抗压测 opt-in 等;脚本 8 项补 is_dir / 锚定正则 / step-all 去重 / h3 提取 / 矩阵行检测 / 标签去重 / is_empty 正则 / tier 超界)+ 21 项轻微(规范 13 项+脚本 8 项);`scripts/check_step.py` 拆分为 4 个 per-step rule 函数 + 字典调度;`magic numbers` 提为模块常量;测试 17 → 33 passed。
 - **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省);`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。
 - **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 跑双轴 `code-review`,收口 4 处遗留 + 归档发布通道。①`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺闭合);②`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,防线口径与 SKILL.md 对齐;③占位符正则从 1 字起步(`<[一-鿿][^>]*>`)收紧为 4 字起步 + 关键词白名单兜底,过滤合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 误报;④`marketplace.json` 字段全合规但 v0.3.16 漏归档,本次显式记入。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review 有意缺省),Step 6 主报告闸仍 PASS。
 - **v0.3.16**（2026-08-13）：**金样例可复验性加固**。占位符闸门补漏（新增通用 `<中文>` 占位模式，原枚举 3 个漏掉 init 模板 20+ 个）；清除金样例 3 处 `<用户文献目录>` 占位残留；`check_step.py` 支持 `process/` 子目录回退，金样例过程文件 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验（`--step all` 失败项 12 → 4，仅缺省 Step2a/5/review）；金样例 README 断链修复（`outputs/漂绿与金融市场风险/` → `process/`）。
@@ -308,5 +310,6 @@ MIT（可商用、可改编）。
 - 灵感来自 Matt Pocock 的 `grill-me` / `wayfinder`（MIT）
 - **v0.3.14 起内置 4 个 Nero1688 子 skill**（来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills)，MIT；详见 `vendor/LICENSE` 与 `NOTICE.md`）
 - **v0.3.15 起内置 academic-humanizer**（jefeerzhang fork，[GitHub](https://github.com/jefeerzhang/academic-humanizer-zh)；上游 [AIScientists-Dev/academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer) MIT；详见 `vendor/academic-humanizer/LICENSE` 与 `NOTICE.md`）
+- **v0.3.20 起内置 2 个 superpowers-zh 子 skill**（来自 [jnMetaCode/superpowers-zh](https://github.com/jnMetaCode/superpowers-zh) MIT；详见 `vendor/chinese-commit-conventions/LICENSE` 与 `vendor/chinese-documentation/LICENSE` 与 `NOTICE.md`）
 - 反坍缩方法借鉴 Diverga 的 Verbalized Sampling（MIT）
 - 方法论参考了 JARS / PRISMA / DA-RT / Pearl DAG / VanderWeele / SESOI 等公开学术标准

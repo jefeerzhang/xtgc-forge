@@ -78,11 +78,11 @@ else
     exit 1
 fi
 
-# 2. 检查 5 个内置子 skill(vendor/ 优先,external fallback + 版本对账)
+# 2. 检查 7 个内置子 skill(vendor/ 优先,external fallback + 版本对账)
 echo ""
-echo "[2/6] 检查 5 个内置子 skill(优先看仓库 vendor/;$SKILLS_DIR 仅作外部覆盖 + 版本对账)..."
+echo "[2/6] 检查 7 个内置子 skill(优先看仓库 vendor/;$SKILLS_DIR 仅作外部覆盖 + 版本对账)..."
 
-EXPECTED_SKILLS=("bilingual-paper-reader" "literature-matrix-builder" "research-method-selector" "causal-inference-architect" "academic-humanizer")
+EXPECTED_SKILLS=("bilingual-paper-reader" "literature-matrix-builder" "research-method-selector" "causal-inference-architect" "academic-humanizer" "chinese-commit-conventions" "chinese-documentation")
 
 MISSING=()
 DOUBLE_SOURCE_WARN=()
