@@ -16,7 +16,7 @@
 [![Anti-Blackbox: Gap 判定方法](https://img.shields.io/badge/Anti--Blackbox-Gap%20判定方法-green)](references/delivery-spec.md#31-附录-c-的gap-判定方法段反黑箱v035)
 [![Anti-Jargon: 黑话+断句](https://img.shields.io/badge/Anti--Jargon-黑话%2B断句-orange)](references/delivery-spec.md#33-可读性层术语翻译--断句反黑话v038)
 [![De-AI: humanizer vendored](https://img.shields.io/badge/De--AI-humanizer%20vendored-purple)](vendor/academic-humanizer/)
-[![Examples: 2 (1 gold)](https://img.shields.io/badge/Examples-2%20(1%20gold)-green)](examples/漂绿治理-绿贷与环境税组合/)
+[![Examples: 2 (1 gold · 1 LEGACY)](https://img.shields.io/badge/Examples-2%20(1%20gold%20%C2%B7%201%20LEGACY)-green)](examples/漂绿治理-绿贷与环境税组合/)
 [![Runtime: Claude Code](https://img.shields.io/badge/Runtime-Claude%20Code-blueviolet)](check-ready.sh)
 
 ## 30 秒看明白
@@ -106,7 +106,8 @@
 - 文内附录：矩阵 · 要点 · Gap · 候选与选定 · 识别 · 元信息
 - **附录 C 反黑箱**：主报告必须自带「Gap 判定方法」段，含五类判定规则（已知 / 矛盾 / 空白 / 方法局限 / 外推）、证据链要件、至少一条真实推理链示例；另列「威胁文献清单」（谁能杀掉这个题，分级 + 本题靠什么活下来）。缺口不是「感觉出来的」，是推出来的、可审计的（delivery-spec §3.1 / §3.2）
 - 详细规格：[`references/delivery-spec.md`](references/delivery-spec.md)
-- **金样例**：[`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/)
+- **金样例**：[`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/)（v0.3.2+ 六段式 + 反黑箱 + 反坍缩，完整可复验）
+- **⚠️ 旧样例（LEGACY）**：[`examples/气候风险对企业绿色转型/`](examples/气候风险对企业绿色转型/) 是 **v0.2.x 旧形态**（`Step6-summary.md` 而非 `00_研究计划报告.md`），**不通过 v0.3 闸门**；仅供历史对照，不要当作完成态参照，详见该目录 `LEGACY.md`
 
 Step1–5 / review / scores 是过程审计，默认不必通读。
 `check_step --step 6` 会拒绝空壳主报告（字数 / 段落 / 矩阵行 / 占位符 / 缺 Gap 判定方法）。

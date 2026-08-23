@@ -23,6 +23,26 @@
 6. **版本**:SKILL.md frontmatter `version: "0.3.16"` → `"0.3.17"` + 标题 + README 版本徽章 + CHANGELOG 顶部;`check-ready.sh` 自取 frontmatter(自动跟随)
 
 ---
+## v0.3.17 · 2026-08-23 · 审查降级为过程建议 + 版本对账(诚实化运动)
+
+**主线**:之前 SKILL.md 把"独立审查"说成"刚性闸门",但 CHANGELOG v0.2.7 已经诚实承认 verdict "没有密码学身份保证"、"理论上审查者也可伪造"。这个矛盾让用户产生虚假合规感。本次把审查定位从「不可绕过的硬关」降级为「强烈推荐的过程建议」,让用户的期望与机器实际能保证的范围对齐。同时加 `check-ready.sh` 版本对账,解决「双来源 skill 谁先加载」的新手排错痛点。
+
+1. **`check-ready.sh` 加版本对账(vendor + 仓库根 SKILL.md 跨文件)**
+   - 双来源探测:vendor/ 与 `$SKILLS_DIR/` 同时存在同名子 skill 时,读两边 `SKILL.md` frontmatter `version:` 对账;academic-humanizer 带 version: 0.3.3 → 自动报告 `vendor 0.3.3 = external 0.3.3 ✅`;Nero1688 4 个 skill 缺 version: 字段 → 诚实报告「双来源均存在,但两边 SKILL.md 都缺 version: 字段,无法自动对账,请手动 diff」+ 给出处理建议(A 升级 / B 临时改名 / C 接受外部覆盖)
+   - 跨文件对账:SKILL.md frontmatter version ↔ README badge Version ↔ CHANGELOG 顶部第一行,任一不一致报 ⚠️(防止 banner 漂移;v0.2.9 曾硬编码 SKILL.md 滞后)
+   - 不破坏:Nero1688 子 skill 自报「无 version」是诚实的,不假装"对账失败";跨文件对账只在三处都存在版本号时校验
+2. **`scripts/check_step.py` `check_review()` 重写,从 hard FAIL 改为 status 三态**
+   - 返回 `(status, hard_errors, soft_warnings)` 而非 `(passed, errors)`
+   - status=PASS / WARN / FAIL;FAIL 仅在 verdict 字段缺失或值非法时返回;WARN 用于「文件缺失 / verdict=FAIL / 信任边界声明缺失 / reviewer 仍是模板占位」等——都不阻塞 `--step all`
+   - verdict 合法值扩到 {PASS, P0_OPEN, FAIL, **NEEDS_HUMAN**};新增 NEEDS_HUMAN 表示审查者明确自承「拿不准,需人类专家复核」,比伪造 PASS 更诚实
+   - `--step scan-review` / `--step topics-review` 子命令只在 status=FAIL 时 sys.exit(1);WARN 仍返回 True
+   - `--step all` 循环:review 缺失/警告写到 stderr(便于 grep),但不计入 failures;金样例 review 缺失从 FAIL 降为 stderr 警告,失败项不变(只剩有意缺省的 Step2a/5)
+3. **SKILL.md 「机器闸门 + 独立审查」段降级措辞**:「刚性闸门」→「机器闸门(过程建议)」;新增「审查作为过程建议」子段,解释为什么降级、列出 NEEDS_HUMAN 语义、引用 CHANGELOG v0.2.7 同款诚实声明
+4. **`scripts/review.py` 两个 VERDICT_TEMPLATES(VERDICT_TEMPLATES 块)加 WARNING 块**:信任边界段开头加 **WARNING · v0.3.17 审查降级说明**,明确「verdict 仅作过程留痕,不可作为合规依据」;同时简化信任边界声明(原本 4 行,新版 2 行,减少模板冗余);verdict 行加上 NEEDS_HUMAN 选项
+5. **README.md Examples badge + LEGACY 提示**:`2 (1 gold)` → `2 (1 gold · 1 LEGACY)`;加一行明确说明「气候风险…/ 是 v0.2.x 旧形态,不通过 v0.3 闸门」
+6. **`examples/气候风险对企业绿色转型/README.md` 头部加 ⚠️ LEGACY 块**:指向 LEGACY.md + 金样例路径,第一次进仓库的人不会被旧样例的 FAIL 误导
+7. **不破坏**:5 个 Checkpoint、六道防线、六段式主报告闸、反坍缩/反黑话/反黑箱校验全部保留;Step6 主报告闸、Step3a 反坍缩、topic_scores 评分等仍 FAIL-as-before
+8. **版本**:待 SKILL.md frontmatter 升级 `version: "0.3.16"` → `"0.3.17"` 后,README badge / CHANGELOG 顶部 / `check-ready.sh` 自动跟随(`SELF_VERSION=$(grep ...)` 已支持)
 
 ## v0.3.16 · 2026-08-13 · 金样例可复验性加固(占位符闸门补漏 + process/ 布局兼容)
 
