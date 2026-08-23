@@ -1,11 +1,6 @@
 # Notice · Third-Party Software Attribution
 
-本仓库 `选题工坊 (xtgc-forge)` 自 v0.3.14 起内置第三方子 skill,作为「最小可运行集」随仓库发布:
-- v0.3.14:4 个 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills) 子 skill
-- v0.3.15:1 个 [jefeerzhang/academic-humanizer-zh](https://github.com/jefeerzhang/academic-humanizer-zh) fork(上游 [AIScientists-Dev/academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer))
-- v0.3.20:2 个 [jnMetaCode/superpowers-zh](https://github.com/jnMetaCode/superpowers-zh) 子 skill
-
-合计 7 个 MIT 子 skill,覆盖文献读取 / 矩阵构建 / 因果识别 / 方法选择 / 中文润色 / 中文 commit 规范 / 中文文档排版。
+本仓库 `选题工坊 (xtgc-forge)` 自 v0.3.14 起内置以下来自 [Nero1688/claude-academic-skills](https://github.com/Nero1688/claude-academic-skills) 的子 skill,作为「最小可运行集」随仓库发布。
 
 ## 上游版权与协议
 
@@ -88,44 +83,19 @@ jefeerzhang 在 AIScientists-Dev 上游之上添加了 C7 中文规则层:
 
 > 注意:本节声明 blader/humanizer 与 koaeraser/ARMS 为**方法论引用**,非 vendored 代码,因此其后续协议变更不直接约束本仓库,但本文档保留 attribution 以尊重原作者贡献。
 
-## 内置 superpowers-zh 子 skill(jnMetaCode 上游,v0.3.20 新增)
-
-- **来源仓库**: <https://github.com/jnMetaCode/superpowers-zh>
-- **本仓库内路径**: `vendor/chinese-commit-conventions/`、`vendor/chinese-documentation/`
-- **版权所有**: Copyright 2026 jnMetaCode
-- **协议**: MIT(完整文本见各子目录 `LICENSE`)
-- **许可证分发**:源仓库 `LICENSE` 单文件随 2 个子目录各 drop-in 复制一份,与 v0.3.15 academic-humanizer 模式相同(每一 vendored 子 skill 单独持有一份 MIT 原件,便于合规审计)
-
-### 内置子 skill 清单
-
-| 路径 | 用途 | 调用场景 |
-|---|---|---|
-| `vendor/chinese-commit-conventions/` | Conventional Commits 中文适配(commitlint / husky / commitizen / conventional-changelog 中文模板) | 用户显式 `/chinese-commit-conventions` 时调用;不自动触发 |
-| `vendor/chinese-documentation/` | 中文技术文档排版参考(中英文空格 / 全半角标点 / 术语保留 / 中文文案排版指北) | 用户显式 `/chinese-documentation` 时调用;不自动触发 |
-
-### 上游之上的传递依赖
-
-**无**。两个子 skill 均为单文件 `SKILL.md`(纯 prompt/contract),无 Python 脚本、无 pip 依赖、无 API key。`allowed-tools` 取决于用户在被调时具体传入,默认走标准 Read/Edit 工具链。
-
-### 与本 skill 的关系
-
-`chinese-commit-conventions` 对应**交付前最后一步**(commit message / CHANGELOG 写作时的规范参考),`chinese-documentation` 对应**交付内容的中文排版参考**(报告/文档/注释)。两者均处于 v0.3.7 提到的「去 AI 味」(humanizer)与 v0.3.18 提到的「反黑话」链路更下游的位置——humanizer 处理文风,这两个 skill 处理格式与术语。
-
 ## MIT §(c) 合规声明
 
-本 `NOTICE.md` 与以下 LICENSE 文件共同满足所有上游协议的 §(c) 要求:
+本 `NOTICE.md` 与以下两个 LICENSE 文件共同满足所有上游协议的 §(c) 要求:
 
 - `vendor/LICENSE`(Nero1688 MIT,覆盖 `vendor/bilingual-paper-reader/`、`vendor/literature-matrix-builder/`、`vendor/causal-inference-architect/`、`vendor/research-method-selector/` 4 个子 skill)
 - `vendor/academic-humanizer/LICENSE`(AIScientists-Dev MIT,覆盖 `vendor/academic-humanizer/`)
-- `vendor/chinese-commit-conventions/LICENSE`(jnMetaCode MIT,覆盖 `vendor/chinese-commit-conventions/`)
-- `vendor/chinese-documentation/LICENSE`(jnMetaCode MIT,覆盖 `vendor/chinese-documentation/`)
 
 > The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-被声明的 MIT 上游版权方:**Nero1688**(2026) + **AIScientists-Dev**(2026) + **jnMetaCode**(2026);方法论引用:`blader/humanizer`(MIT)、`koaeraser/ARMS`(MIT)。
+被声明的 MIT 上游版权方:**Nero1688**(2026) + **AIScientists-Dev**(2026);方法论引用:`blader/humanizer`(MIT)、`koaeraser/ARMS`(MIT)。
 
 ## 主机项目信息
 
 - **主机项目**: 选题工坊(xtgc-forge)
 - **主机协议**: MIT(完整文本见仓库根 `LICENSE`)
-- **本 NOTICE 起始版本**: v0.3.14(2026-08-13);v0.3.15 新增 academic-humanizer 段;v0.3.20 新增 2 个 superpowers-zh 子 skill 段
+- **本 NOTICE 起始版本**: v0.3.14(2026-08-13);v0.3.15 新增 academic-humanizer 段
