@@ -21,7 +21,6 @@ v0.3.18 起,verdict 值允许 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};
 """
 
 import argparse
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -263,7 +262,7 @@ def create_review_template(workdir: str, target: str) -> str:
     print("     - reviewer context 必须为空(不含产出过程)")
     print("     - reviewer_agent_id ≠ producer_agent_id")
     print("     - v0.3.18+ verdict 允许值:PASS / P0_OPEN / FAIL / NEEDS_HUMAN")
-    print(f"  2. 填完后跑:python scripts/check_step.py --workdir {workdir} --step {target}-review")
+    print(f"  2. 填完后跑:python scripts/check_step.py --workdir {workdir_path} --step {target}-review")
     print("  3. PASS / NEEDS_HUMAN → 继续下一阶段")
     print("     P0_OPEN → 修复后重审(≤3 轮)")
     print("     FAIL → 用户决定是否重跑(过程建议,不强制)")

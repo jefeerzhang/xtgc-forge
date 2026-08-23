@@ -22,6 +22,20 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Callable
+
+
+# === 模块常量(闸门阈值 / 可读性边界)===
+# 反坍缩:至少 1 个主推 t_score ≤ 此值,防止 3 主推全落安全层
+ANTI_COLLAPSE_LOW_TIER = 0.50
+# 复跑决策记录:去除空白后 < 此值视为空壳拦截
+RERUN_EMPTY_THRESHOLD = 30
+# 贡献类型门:reveals 字段最短字数
+MIN_REVEALS_LEN = 8
+# 正文段落最小有效字符数(用于 _count_paragraphs 过滤纯标题/纯表格/纯占位的伪段)
+MIN_PARAGRAPH_CHARS = 40
+# 正文句子最大长度(以 。；为界),超过即 FAIL(断句规则)
+MAX_BODY_SENTENCE = 100
 
 
 def _self_version() -> str:
@@ -212,7 +226,7 @@ def _count_paragraphs(section: str) -> int:
         rows = [ln for ln in c.splitlines() if ln.strip()]
         if rows and all(ln.strip().startswith("|") for ln in rows):
             continue
-        if _count_cjk_and_alnum(c) >= 40:
+        if _count_cjk_and_alnum(c) >= MIN_PARAGRAPH_CHARS:
             n += 1
     return n
 
@@ -439,7 +453,7 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     content = rerun_file.read_text(encoding="utf-8")
     has_quote = any(p in content for p in RERUN_PHRASES)
     has_time = bool(re.search(r"\d{4}-\d{2}-\d{2}|\d{4}/\d{1,2}/\d{1,2}", content))
-    is_empty = len(content.strip()) < 30 or PLACEHOLDER_PATTERNS_RE.search(content) is not None
+    is_empty = len(content.strip()) < RERUN_EMPTY_THRESHOLD or PLACEHOLDER_PATTERNS_RE.search(content) is not None
 
     if is_empty:
         errors.append("00_复跑决策记录.md 为空壳(无内容/占位符),不得视为复跑授权")
@@ -464,12 +478,9 @@ BODY_JARGON = [
     r"反坍缩",
     r"Checkpoint",
     r"\bSESOI\b",
-    r"（探索性）",
+    # 探索性括号:同时匹配 ASCII (探索性) 与全角 （探索性）,防止半全角混写漏报
+    r"(?:[\(（]\s*探索性\s*[\)）])",
 ]
-
-# 正文句子最大长度(以 。；为界),超过即 FAIL(断句规则)
-MAX_BODY_SENTENCE = 100
-
 
 def _strip_md_structure(text: str) -> str:
     """剥离 markdown 结构行(标题/表格/代码块/公式块/分隔线/列表标记/引用标记),只留真散文。"""
@@ -499,8 +510,10 @@ def _strip_md_structure(text: str) -> str:
         # 列表行:去列表标记,保留内容
         out.append(re.sub(r"^([-*]\s|\d+\.\s)", "", stripped))
     joined = "\n".join(out)
-    # 去行内 markdown 符号,避免计数字符虚高
-    return re.sub(r"[`*_]", "", joined)
+    # 去行内 markdown 符号,避免计数字符虚高。
+    # 仅剥离「字边界处」的 * / ` / _(如行首缩进强调、行尾参考链接)，
+    # 单词中间的 snake_case、x*2、4*5 这类不被吞掉。
+    return re.sub(r"(?:^|\s)[`*_]+(?:\s|$)", " ", joined)
 
 
 def check_readability(content: str) -> list[str]:
@@ -596,9 +609,9 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
             )
         else:
             reveals = reveals.strip()
-            if len(reveals) < 8:
+            if len(reveals) < MIN_REVEALS_LEN:
                 errors.append(
-                    f"{prefix}: 'reveals' 过短({len(reveals)}字 < 8)。『揭示了什么』答不上 = 工程任务/重复验证,回炉"
+                    f"{prefix}: 'reveals' 过短({len(reveals)}字 < {MIN_REVEALS_LEN})。『揭示了什么』答不上 = 工程任务/重复验证,回炉"
                 )
             elif reveals == c.get("title"):
                 errors.append(
@@ -686,7 +699,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
         tiers_used = {c.get("tier") for c in selected if c.get("tier") in valid_tiers}
         has_low = any(
             isinstance(c.get("t_score"), (int, float)) and not isinstance(c.get("t_score"), bool)
-            and 0 <= c["t_score"] <= 0.50
+            and 0 <= c["t_score"] <= ANTI_COLLAPSE_LOW_TIER
             for c in selected
         )
         if len(tiers_used) < 2:
@@ -796,6 +809,82 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     return ("PASS", hard_errors, soft_warnings)
 
 
+def _check_step_2c(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
+    """Step 2c 额外校验:「证据来源」≥ 3 条 + 占位符拦截。"""
+    errors: list[str] = []
+    if content.count("证据来源") < 3:
+        errors.append("Step 2c:「证据来源」出现 < 3 次(Gap 条数过少或未展开)")
+    errors.extend(check_placeholders(content, "Step 2c"))
+    return errors
+
+
+def _check_step_3a(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
+    """Step 3a 额外校验:topic_scores.json + 反坍缩(_from_all 时由 --step all 顶层统一调用,跳过以避免双前缀)。"""
+    errors: list[str] = []
+    if _from_all:
+        return errors
+    ts_passed, ts_errors = check_topic_scores(workdir_path)
+    if not ts_passed:
+        errors.append("--- topic_scores.json 校验失败 ---")
+        errors.extend(ts_errors)
+    ac_passed, ac_errors = check_anti_collapse(workdir_path)
+    if not ac_passed:
+        errors.append("--- 反坍缩校验失败 ---")
+        errors.extend(ac_errors)
+    return errors
+
+
+def _check_step_3b(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
+    """Step 3b 额外校验:对抗压测小节(半强校验)。启用即做完整。"""
+    if "对抗压测" not in content:
+        return []
+    errors: list[str] = []
+    # 新格式(v0.3.12):生存标签 + 至少 6 类坍缩攻击名(经管语境)
+    attack_kw = ["换情境", "换术语", "识别", "已被占", "不可证伪",
+                 "范围过宽", "数据质量", "不可行", "贡献类型"]
+    survival_kw = ["存活", "需收窄", "需转向", "坍缩"]
+    has_survival = any(k in content for k in survival_kw)
+    hit = sum(1 for k in attack_kw if k in content)
+    new_style_ok = has_survival and hit >= 6
+    # 旧格式(v0.3.6)兼容:魔鬼代言 + 最可能被拒 + 回应
+    old_style_ok = all(k in content for k in ["魔鬼代言", "最可能被", "回应"])
+    if not (new_style_ok or old_style_ok):
+        detail = ""
+        if not has_survival:
+            detail += "缺少四档生存标签(存活/需收窄/需转向/坍缩)。"
+        if hit < 6:
+            detail += f"9 类攻击仅命中 {hit}/9(换情境/换术语/识别/已被占/不可证伪/范围过宽/数据质量/不可行/贡献类型),至少攻击 6 类。"
+        errors.append(f"Step 3b 已含「对抗压测」小节,但未做完整:{detail}启用即做完整:每条攻击给 1 句回应 + 打 1 个生存标签")
+    return errors
+
+
+def _check_step_6(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
+    """Step 6 额外校验:主报告质量 + 交互留痕 + 复跑授权(_from_all 时由 --step all 顶层统一调用交互/复跑)。"""
+    errors: list[str] = []
+    errors.extend(check_step6_quality(content))
+    if _from_all:
+        return errors
+    il_passed, il_errors = check_interaction_log(workdir_path)
+    if not il_passed:
+        errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
+        errors.extend(il_errors)
+    rr_passed, rr_errors = check_rerun_record(workdir_path, file_path)
+    if not rr_passed:
+        errors.append("--- 复跑授权校验失败 ---")
+        errors.extend(rr_errors)
+    return errors
+
+
+# Per-step extra 规则分发:key=step 名,value=调用 (workdir, content, file_path, _from_all) 返回 list[str]
+# 顶层 check_step() 只负责基础 GATES 校验 + 调这里的 per-step 额外规则。
+STEP_RULES: dict[str, Callable[..., list[str]]] = {
+    "2c": _check_step_2c,
+    "3a": _check_step_3a,
+    "3b": _check_step_3b,
+    "6": _check_step_6,
+}
+
+
 def check_step(workdir: str, step: str, _from_all: bool = False) -> tuple[bool, list[str]]:
     """检查单个 step 的产物完整性。返回 (passed, errors)。
 
@@ -892,55 +981,10 @@ def check_step(workdir: str, step: str, _from_all: bool = False) -> tuple[bool, 
     if rule.get("ban_placeholders"):
         errors.extend(check_placeholders(content, f"Step {step}"))
 
-    if step == "3a" and not _from_all:
-        # _from_all=True 时由 check_step("all") 顶层统一调用,
-        # 此处跳过以避免同一错误双前缀([step 3a] + [topic_scores.json])重复上报。
-        ts_passed, ts_errors = check_topic_scores(workdir_path)
-        if not ts_passed:
-            errors.append("--- topic_scores.json 校验失败 ---")
-            errors.extend(ts_errors)
-        ac_passed, ac_errors = check_anti_collapse(workdir_path)
-        if not ac_passed:
-            errors.append("--- 反坍缩校验失败 ---")
-            errors.extend(ac_errors)
-
-    if step == "3b" and "对抗压测" in content:
-        # 半强校验(v0.3.12):启用对抗压测就必须做完整;未启用不拦
-        # 新格式:生存标签 + 至少 6 类坍缩攻击名(经管语境)
-        attack_kw = ["换情境", "换术语", "识别", "已被占", "不可证伪",
-                     "范围过宽", "数据质量", "不可行", "贡献类型"]
-        survival_kw = ["存活", "需收窄", "需转向", "坍缩"]
-        has_survival = any(k in content for k in survival_kw)
-        hit = sum(1 for k in attack_kw if k in content)
-        new_style_ok = has_survival and hit >= 6
-        # 旧格式(v0.3.6)兼容:魔鬼代言 + 最可能被拒 + 回应
-        old_style_ok = all(k in content for k in ["魔鬼代言", "最可能被", "回应"])
-        if not (new_style_ok or old_style_ok):
-            detail = ""
-            if not has_survival:
-                detail += "缺少四档生存标签(存活/需收窄/需转向/坍缩)。"
-            if hit < 6:
-                detail += f"9 类攻击仅命中 {hit}/9(换情境/换术语/识别/已被占/不可证伪/范围过宽/数据质量/不可行/贡献类型),至少攻击 6 类。"
-            errors.append(f"Step 3b 已含「对抗压测」小节,但未做完整:{detail}启用即做完整:每条攻击给 1 句回应 + 打 1 个生存标签")
-
-    if step == "6":
-        errors.extend(check_step6_quality(content))
-        if not _from_all:
-            # 与 check_topic_scores 同理:_from_all 时由 --step all 顶层统一调用。
-            il_passed, il_errors = check_interaction_log(workdir_path)
-            if not il_passed:
-                errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
-                errors.extend(il_errors)
-            rr_passed, rr_errors = check_rerun_record(workdir_path, file_path)
-            if not rr_passed:
-                errors.append("--- 复跑授权校验失败 ---")
-                errors.extend(rr_errors)
-
-    # 2c 额外:至少 3 条证据来源
-    if step == "2c":
-        if content.count("证据来源") < 3:
-            errors.append("Step 2c:「证据来源」出现 < 3 次(Gap 条数过少或未展开)")
-        errors.extend(check_placeholders(content, "Step 2c"))
+    # 基础 GATES 通过后,分发到 per-step 额外规则(2c/3a/3b/6)
+    extra = STEP_RULES.get(step)
+    if extra is not None:
+        errors.extend(extra(workdir_path, content, file_path, _from_all))
 
     return (len(errors) == 0, errors)
 

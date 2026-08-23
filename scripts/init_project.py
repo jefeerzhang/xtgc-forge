@@ -11,7 +11,6 @@
 """
 
 import argparse
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -518,8 +517,12 @@ def main():
     parser = argparse.ArgumentParser(description="选题工坊 · 项目初始化")
     parser.add_argument("--workdir", "-w", required=True, help="工作目录路径(将创建)")
     parser.add_argument("--name", "-n", default="未命名研究主题", help="研究主题名称")
-    parser.add_argument("--branch", "-b", default="推断性", help="学科分支:推断性 / 描述性 / 质性 / 混合")
-    parser.add_argument("--language", "-l", default="zh-CN", help="语言:zh-CN / en-US")
+    parser.add_argument("--branch", "-b", default="推断性",
+                        choices=["推断性", "描述性", "质性", "混合"],
+                        help="学科分支:推断性 / 描述性 / 质性 / 混合")
+    parser.add_argument("--language", "-l", default="zh-CN",
+                        choices=["zh-CN", "en-US"],
+                        help="语言:zh-CN / en-US")
     parser.add_argument("--force", action="store_true",
                         help="允许覆盖已存在的项目文件(默认拒绝,以防静默丢失)")
     args = parser.parse_args()

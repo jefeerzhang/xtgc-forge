@@ -3,7 +3,7 @@ name: 选题工坊
 description: |
   社科人文向的"用户文献 → 选题研究计划"流程纪律产品。
   输入用户自备的 PDF 文献(5-50 篇)+ 模糊领域;过程产出矩阵/gap/候选主题/假设/识别;
-  **用户主交付仅 1 份自洽完整的研究计划报告**:正文六段(题目→为何→意义→假设→依据→怎么做)
+  **用户主交付仅 1 份自洽完整的研究计划报告**:正文六段(题目→为何→意义→假设→假设依据→怎么做)
   + 文内附录(文献矩阵/要点/Gap/候选与选定/识别要点);论述须充分,禁止一句话观点。
   强制 5 次 Checkpoint 硬暂停(文献/矩阵/主题/假设/交付)+ 独立审查 verdict(scan / topics)+ topic_scores 6 维评分。
   不调任何自动文献检索(WebSearch / arXiv / PubMed / Semantic Scholar / Sci-Hub)。
@@ -101,6 +101,8 @@ flowchart TD
 **复跑**:仅当用户明确沿用 + 存在 `00_复跑决策记录.md` 且文献/收窄未变;否则仍 5 闸(见 delivery-spec §5)。**复跑模式:5 闸全部仍须各停一次(L399 硬规则优先)。**
 
 **复跑纪律(v0.3.10)**:①**附录 F 决策表不是当次授权**——它是历史记录;复跑授权必须由 `00_复跑决策记录.md`(含用户当次原话 + 时间)提供;②`check_step --step 6` 校验:声明复跑却无复跑记录 / 复跑记录是空壳(占位符、无原话、无时间)→ FAIL;③复跑 ≠ 无留痕:interaction-log 仍须 5 闸各一条确认(状态标「已确认·复跑授权」)。
+
+> **字面 token 声明**:token = `已确认 · 复跑授权`(全角空格、中间为中点 `·`)。匹配正则:`r"已确认\s*·\s*复跑授权"`(允许两端任意空白)。其它写法(如「已确认复跑授权」「确认复跑」「复跑通过」)均不算。
 
 ### 交互留痕(v0.3.9 · 5 闸的证据,硬规则)
 
@@ -269,7 +271,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 - 研究类型标签
 - **T-Score(0-1)+ 层级 tier**(同上)
 
-**topic_scores.json** — 6 维评分(RTS 风格)+ 反坍缩字段:
+**topic_scores.json** — 6 维评分(RTS(Research Topic Skills)风格)+ 反坍缩字段:
 
 | 维度 | 含义 |
 |---|---|
@@ -333,6 +335,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 ```bash
 # 初始化项目目录(可选但推荐)
 python scripts/init_project.py --workdir <dir> --name "<主题>" --branch "推断性"
+# branch ∈ {推断性, 描述性, 质性, 混合},对应默认方法预设。
 
 # 校验单个 Step
 python scripts/check_step.py --workdir <你的工作目录> --step 3a
@@ -355,7 +358,7 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 - `Step 4 后`(可选):生成 `review_topics.md`,同上
 - `--step all` 会把缺失的 `review_scan.md` / `review_topics.md` 报为 ⚠️ 警告(不阻塞交付),见下文"审查作为过程建议"
 
-### 独立审查机制(v0.2.7,自 v0.3.18 起降级为过程建议)
+### 独立审查机制(v0.2.7 引入独立审查;v0.3.18 起降级为过程建议)
 
 借鉴 RTS(Research Topic Skills)v1.5.2 的独立审查分离做法:**"推荐由独立 subagent 填 verdict",但承认本 skill 没有密码学保证**,不当作不可绕过的刚性闸门。
 
@@ -378,7 +381,7 @@ PASS / NEEDS_HUMAN → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮) | FAIL �
 3. 含 `reviewer-<hash>` 标记(不必真实存在,模板占位即可)
 4. verdict=P0_OPEN 时需列出 P0-1 / P0-2 等具体问题
 
-**为什么降级**(诚实声明):
+**为什么降级** [诚实声明 / 已知局限]:
 
 - 现状的"独立审查"实质是让 Agent 起一个 subagent、给它一份空 context。**没有密码学身份保证**,verdict 由谁写、是否真独立、是否真未参考 producer 上下文,都没法机器验证。CHANGELOG v0.2.7 也承认这是 RTS v1.5.2 的同款残留。
 - 把"刚性闸门"措辞降级为"过程建议",避免给用户虚假的合规感。审查仍**强烈推荐**(尤其金样例这种对外发布场景),但不当作不可绕过的硬关。
@@ -398,7 +401,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 | **#4** | Step 4 后 | 明确说「假设确认」或逐条确认 | **停**,不得进 Step 5 |
 | **#5** | Step 6 后 | 明确说「交付收工」或说明下一步 | **停**,不得宣布流程结束 |
 
-### 硬约束(反跳过)
+### 硬约束(反跳过三铁律 · 三不可)
 
 1. **禁止代选**:Agent 不得写「若无异议我将默认选 Q1 / 默认假设通过」。
 2. **禁止合并跳过**:不得把 #1+#2+#3 塞进同一轮「一键全过」;每一闸门单独一轮用户回复。
@@ -626,7 +629,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
    - `collapses`(坍缩):核心卖点被击穿,建议换题
 4. 写入 Step3b 的「## 对抗压测」小节,并附一句「生存标签 + 依据」
 
-**半强校验**:`check_step.py --step 3b` 若发现 Step3b 含「对抗压测」标题,则强制该小节含「生存标签」且含至少 6 类攻击名;旧格式(「魔鬼代言」+「最可能被拒」+「回应」)仍兼容放行;未启用对抗则不拦。**启用即做完整,不启用不强求。**
+**条件校验**:`check_step.py --step 3b` 若发现 Step3b 含「对抗压测」标题,则强制该小节含「生存标签」且含至少 6 类攻击名;旧格式(「魔鬼代言」+「最可能被拒」+「回应」)仍兼容放行;未启用对抗则不拦。**启用即做完整,不启用不强求。**
 
 **与 Checkpoint #3 的关系**:对抗压测是用户点名后的「质检 + 解释」,不替代用户拍板;若生存标签为 `needs_pivot`/`collapses`,把降级建议带给用户,仍由用户决定是否换题。
 
@@ -759,14 +762,14 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 │   └── academic-humanizer/               Step 6 去 AI 味润色(v0.3.15 新增;LICENSE 见子目录)
 ├── references/
 │   ├── delivery-spec.md                 主交付规格(§3.1/3.2 反黑箱、§3.3 反黑话、§5 复跑契约)
-│   ├── anti-collapse.md                 反坍缩方法论(T-Score 分层,借鉴 Diverga MIT 的 VS)
+│   ├── anti-collapse.md                 反坍缩方法论(T-Score 分层,借鉴 Diverga MIT 的 VS,同 §反坍缩机制,见上)
 │   ├── deai-checklist.md                去 AI 味自查清单(Step 6 润色兜底)
 │   └── methodology-sources.md           方法论参考来源(参见用)
 ├── examples/
 │   ├── 漂绿治理-绿贷与环境税组合/         ★ v0.3.2+ 金样例(主报告完成态)
 │   └── 气候风险对企业绿色转型/            旧过程样例(见 LEGACY.md)
 ├── scripts/
-│   ├── init_project.py                   初始化工作目录(生成 11 个模板)
+│   ├── init_project.py                   初始化工作目录(生成 Step1-input.md / Step2a-points.md / Step2b-literature-matrix.md / Step2c-gap-verdicts.md / Step3a-candidate-themes.md / Step3b-selected-theme.md / topic_scores.json / Step4-hypotheses.md / Step5-identification-strategy.md / 00_研究计划报告.md / 00_交付说明.md / 00_任务元信息.md / 00_复跑决策记录.md / interaction-log.md / review_scan.md / review_topics.md 等模板)
 │   ├── check_step.py                     刚性闸门校验
 │   └── review.py                         独立审查模板生成
 └── check-ready.sh                        就绪检查(环境 + 依赖 + 文献目录)
@@ -794,6 +797,8 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ## 版本
 
+> **当前金样例缺省状态(2026-08-23 现状)**:`examples/漂绿治理-绿贷与环境税组合/process/` 仅缺 `Step2a-points.md`(读 PDF 提要点,用户无 PDF 时本就不产出);`Step5-identification-strategy.md` 已于 v0.3.18 后生成(描述性/质性研究路径亦可产出),不再属于"有意缺省"。v0.3.18 条目中"金样例只剩 Step2a/5 两项有意缺省"系发布日状态,此为后续补充。
+
 - **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省)。`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。
 - **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 改动跑了一次双轴 `code-review` 审查(Standards + Spec 并行子代理),收口 4 处遗留 + 归档发布通道。①[A1 断链修复字面闭合]`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺才算闭合);②[A2 / Standards #1 防线口径对齐]`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,从 marketplace 安装的用户不会误为硬约束;③[C1 / Standards #4 占位符正则收紧]`check_step.py` 通用匹配 `r"<[\u4e00-\u9fff][^>]*>"`(1 字起步)→ 双层:`r"<[一-鿿]{4,}[^>]*>"`(4 汉字起步)+ 关键词白名单兜底 1-3 字 / 含空格/Gap 混合占位符,过滤掉合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 等;④[B1 发布通道归档]`marketplace.json` 字段全合规但 v0.3.16 CHANGELOG 漏归档,本次显式记入(本行 ⑤)。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review,均为金样例有意缺省),Step 6 主报告闸仍 PASS。
 - **v0.3.16**(2026-08-13):**金样例可复验性加固**。①占位符闸门补漏:新增通用模式 `<[\u4e00-\u9fff][^>]*>`,覆盖 init 模板 `<中文...>` 占位符家族(原枚举 3 个模式漏掉 20+ 个);②清除金样例 3 处 `<用户文献目录>` 占位残留(主报告附录 F / Step1-input / 旧样例 Step2a OCR 目录树);③`check_step.py` 新增 `_resolve_workdir_file()` helper,产物文件按「根目录 → process/ 子目录」回退解析,金样例 `process/` 下 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验,`--step all` 失败项 12 → 4(仅缺省 Step2a/5/review);④金样例 README 断链修复(`outputs/漂绿与金融市场风险/` 不存在 → 指向 `process/`),主 README `outputs/` 注明不入库。⑤新增 `.claude-plugin/marketplace.json`,声明 Claude Plugin Marketplace 发布通道元数据(name/source/description/version/keywords/homepage/license/skills)。
@@ -806,15 +811,15 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 - **v0.3.9**(2026-08-13):**交互留痕(5 闸的证据)**。新增 `interaction-log.md`:每次 Checkpoint 暂停/确认后立即追加一行(闸门+状态+时间+**用户原话**,禁止代填);`check_step --step 6 / all` 强制 5 闸各有确认记录,缺任一闸或无原话 → FAIL,禁止未交互交付。修「5 闸全靠提示词自觉、无机器证明」的漏洞:没交互现在从静默假成功变成可见失败。
 - **v0.3.8**(2026-08-13):**可读性层(反黑话)**。主报告正文(开头→整合附录前)禁内部黑话(GAP 编号/Checkpoint/SESOI/t_score/反坍缩等,须按 delivery-spec §3.3 术语翻译表改成人话)+ 超长句闸门(>100 字 FAIL);`check_step --step 6` 强制;金样例正文 10 处黑话全部翻译。可选增强:可装 `academic-humanizer-zh`(MIT)做最后文风润色,但治不了黑话——顺序是「先翻译、后润色」。
 - **v0.3.7**(2026-08-13):**贡献类型门 + 威胁文献清单**。①每个候选必答「揭示了什么」(答不上=工程任务/重复验证,`check_step --step 3a` + topic_scores 双校验,禁止与标题雷同);②Step 2c 加威胁文献定义,主报告附录 C 强制「威胁文献清单」段(致命/高/中分级 + 本题靠什么活下来 + 不在本批文献须诚实标注),`check_step --step 6` 校验「威胁文献」;③delivery-spec §3.2 新增规格,init 模板同步。借鉴 zhonxia 贡献类型门与 chgagne 威胁分级。
-- **v0.3.6**(2026-08-13):**主题对抗压测(可选增强)**。用户点名选定后,魔鬼代言人对主题出 2-3 条「最可能被审稿人拒的理由」+ 回应,写入 Step3b「对抗压测」小节;check_step 3b 半强校验(启用即做完整);借鉴 research-companion 7 维压测与 MultiAgent-Research-Ideator 实证参数(深迭代优于并行批判者)。用户说「不用」即跳过,不新增硬闸。
+- **v0.3.6**(2026-08-13):**主题对抗压测(可选增强)**。用户点名选定后,魔鬼代言人对主题出 2-3 条「最可能被审稿人拒的理由」+ 回应,写入 Step3b「对抗压测」小节;check_step 3b 条件校验(启用即做完整);借鉴 research-companion 7 维压测与 MultiAgent-Research-Ideator 实证参数(深迭代优于并行批判者)。用户说「不用」即跳过,不新增硬闸。
 - **v0.3.5**(2026-08-13):**反黑箱交付**。主报告附录 C 强制加「Gap 判定方法」段(五类判定规则 + 证据链要件 + 真实推理链示例);`check_step --step 6` 校验「Gap 判定方法」+「证据链」;规格见 delivery-spec §3.1。让「文献→缺口」不再黑箱:用户能看到缺口是怎么判出来的。
 - **v0.3.4**(2026-08-13):**反坍缩机制**。Step 3a 强制三阶段:模态识别(先点名最安全题,避 T≥0.80)→ 分层替代(3 主推覆盖 ≥2 层级、至少 1 个 T≤0.50)→ 闸门校验(check_step 卡坍缩);topic_scores.json 加 `t_score` + `tier` 字段;新增 `references/anti-collapse.md`(借鉴 Diverga MIT 的 VS 方法,中文社科实证化)。
-- **v0.3.3**(2026-08-11):**鲁班三刀**。①`check_step` Step6 加固(字数/段落/矩阵行/占位符,空壳 FAIL);②金样例 `examples/漂绿治理-绿贷与环境税组合/`;③`references/delivery-spec.md` 外置规格 + SKILL 瘦身;依赖改可选;Step5 不强制 IV。
+- **v0.3.3**(2026-08-11):**三件加固**。①`check_step` Step6 加固(字数/段落/矩阵行/占位符,空壳 FAIL);②金样例 `examples/漂绿治理-绿贷与环境税组合/`;③`references/delivery-spec.md` 外置规格 + SKILL 瘦身;依赖改可选;Step5 不强制 IV。
 - **v0.3.2**(2026-08-11):**交付纪律全局化**。新增「最终产品规格」总纲;主报告=正文六段+文内矩阵/要点/Gap/候选/识别;论述须充分;复跑模式可跳过重复询问;Step2a 允许文字层抽取(非 OCR)。
 - **v0.3.1**(2026-08-11):**用户主交付定型 — 六段式研究计划报告**。Step 6 主产品改为 `00_研究计划报告.md`(1 题目 → 2 为何选题 → 3 意义 → 4 假设 → 5 假设依据 → 6 怎么做);Step1–5 降为过程附录;禁止把文件清单当最终交付中心。顺序要求**先亮题再论证**。实测反馈:过程文件过多淹没选题目标。
 - **v0.3.0**(2026-08-10):**精雕 — 从骨架+纪律升级到可视化+传播资产**。SKILL.md frontmatter 触发词 19 条 + 顶部 mermaid 流程图;README 首屏 6 个徽章 + ASCII 流程图 + 5 闸硬暂停表格 + 触发词云;新增 `CHANGELOG.md` / `assets/diagram/` / `assets/comparison.md`。**逻辑骨架未动**(v0.2.9 的 5 闸硬暂停保留)。
 - **v0.2.9**(2026-08-10):**强制 5 次 Checkpoint 硬暂停**。#1–#5 全部硬暂停;禁止代选/合并跳过/用 check_step 代替用户确认;修正 Step3/4 闸门编号。
-- **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
+- **v0.2.8**(2026-08-10):**可复现性补全(P1 = 优先级 1)**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
 - **v0.2.7**(2026-08-10):**独立审查分离 / 安装链路修复**(借鉴 RTS v1.5.2 + 鲁班方案 A)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证);check-ready.sh 去私有路径;slash 入口改为合法语法;依赖安装引导入 README。
 - **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。6 维评分 + decision 字段。
 - **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
