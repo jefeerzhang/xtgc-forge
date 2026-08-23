@@ -233,8 +233,9 @@ def create_review_template(workdir: str, target: str) -> str:
     """生成审查产物模板。"""
     workdir_path = Path(workdir).expanduser().resolve()
 
-    if not workdir_path.exists():
-        print(f"❌ 工作目录不存在:{workdir_path}")
+    # --workdir 必须是已存在的目录(与 init_project.py 一致的「文件拒绝」契约)。
+    if not workdir_path.exists() or not workdir_path.is_dir():
+        print(f"❌ 工作目录不存在或不是目录:{workdir_path}")
         sys.exit(1)
 
     if target not in VERDICT_TEMPLATES:

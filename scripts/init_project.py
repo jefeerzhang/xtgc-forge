@@ -478,6 +478,12 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
             for f in existing:
                 print(f"  - {f}", file=sys.stderr)
 
+    # 创建目录前,确保 --workdir 不是已存在的文件(否则 mkdir 会抛 FileExistsError,
+    # 且语义上「对文件路径做 init」是用户错误,应显式拒绝)。
+    if workdir_path.exists() and not workdir_path.is_dir():
+        print(f"❌ --workdir 路径已存在但不是目录:{workdir_path}", file=sys.stderr)
+        sys.exit(1)
+
     # 创建目录
     workdir_path.mkdir(parents=True, exist_ok=True)
 

@@ -154,9 +154,11 @@ PLACEHOLDER_PATTERNS = [
     r"\bTBD\b",
     r"（待填）",
     r"\(待填\)",
-    r"请填写或修改",
+    r"<请填写或修改>",
     r"由 `?init_project\.py`? 自动生成",
 ]
+# 组合正则:用于「含任一模板占位符」的快速判定(如复跑决策记录空壳拦截)
+PLACEHOLDER_PATTERNS_RE = re.compile("|".join(PLACEHOLDER_PATTERNS))
 def _count_cjk_and_alnum(text: str) -> int:
     """粗算有效字符数(中日韩 + 字母数字)。"""
     return len(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]", text))
@@ -183,8 +185,10 @@ def _extract_section(content: str, heading_substr: str, next_headings: list[str]
             if nh in line and heading_substr not in line:
                 end = j
                 return "\n".join(lines[start:end])
-        if re.match(r"^#{1,2}\s+", line) and j > start:
-            # 同级或更高级标题
+        # 任何级别的标题都视为潜在分节边界(从 # 到 ######),
+        # 然后用 level <= start_level 判定是否真属于「同级或更高级」。
+        # 这样 ## 下的 ### 不会被忽略,### 段也能正确切分。
+        if re.match(r"^#{1,6}\s+", line) and j > start:
             level = len(line) - len(line.lstrip("#"))
             start_line = lines[start - 1]
             start_level = len(start_line) - len(start_line.lstrip("#"))
@@ -228,18 +232,24 @@ def _count_matrix_data_rows(content: str) -> int:
     rows = 0
     for line in appendix.splitlines():
         s = line.strip()
-        if not s.startswith("|"):
+        # Markdown 表格行:首尾必须是 |
+        if not s.startswith("|") or not s.endswith("|"):
             continue
         if re.match(r"^\|?\s*:?-+:?\s*\|", s):
-            continue
-        # 表头
-        if "作者" in s and "年份" in s:
-            continue
-        if re.match(r"^\|\s*ID\s*\|", s, re.I):
             continue
         # 数据行:含 L1/L2… 或至少 5 个单元格
         cells = [c.strip() for c in s.strip("|").split("|")]
         if len(cells) < 5:
+            continue
+        # 表头判定:整行同时含「作者」+「年份」(分列形式)
+        if "作者" in s and "年份" in s:
+            continue
+        # 表头判定:首格同时含「作者」+「年份」(合并表头 / 多列合一)
+        first = cells[0]
+        if "作者" in first and "年份" in first:
+            continue
+        # 表头白名单:ID / 编号 / — / -
+        if first in ("ID", "编号", "—", "-"):
             continue
         if re.search(r"\bL\d+\b", s) or (cells[0] and cells[0] not in ("ID", "编号", "—", "-")):
             # 排除仍是表头变体
@@ -274,7 +284,7 @@ def _resolve_workdir_file(workdir: Path, filename: str) -> Path:
 def check_step6_quality(content: str) -> list[str]:
     """Step 6 主报告质量闸(防空壳)。"""
     errors = []
-    errors.extend(check_placeholders(content, "Step6 主报告"))
+    errors.extend(check_placeholders(content, "main"))
 
     # 附录标题
     for app in ["附录 A", "附录 B", "附录 C", "附录 D", "附录 E"]:
@@ -429,7 +439,7 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     content = rerun_file.read_text(encoding="utf-8")
     has_quote = any(p in content for p in RERUN_PHRASES)
     has_time = bool(re.search(r"\d{4}-\d{2}-\d{2}|\d{4}/\d{1,2}/\d{1,2}", content))
-    is_empty = len(content.strip()) < 30 or "待填" in content or "<" in content
+    is_empty = len(content.strip()) < 30 or PLACEHOLDER_PATTERNS_RE.search(content) is not None
 
     if is_empty:
         errors.append("00_复跑决策记录.md 为空壳(无内容/占位符),不得视为复跑授权")
@@ -607,7 +617,14 @@ TIER_BANDS = {
 
 
 def _tier_of(t_score: float) -> str:
-    """由 t_score 推导层级(与 anti-collapse.md 分界一致)。"""
+    """由 t_score 推导层级(与 anti-collapse.md 分界一致)。
+
+    越界(< 0 或 > 1)直接抛 ValueError,不再静默回退到 "safe"。
+    静默回退会让 check_anti_collapse 同时报「tier 非法」和「推导层级为 safe」两条
+    互相矛盾的消息,反而更难定位 bug。
+    """
+    if t_score < 0 or t_score > 1:
+        raise ValueError(f"t_score={t_score} 不在 0-1 范围")
     for tier, (lo, hi) in TIER_BANDS.items():
         if lo <= t_score < hi:
             return tier
@@ -653,8 +670,10 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
             errors.append(f"{prefix}: 缺少 'tier'(safe/differentiated/innovative)")
         elif tier not in valid_tiers:
             errors.append(f"{prefix}: 'tier'='{tier}' 非法,应为 safe/differentiated/innovative")
-        elif _tier_of(t_score) != tier:
-            # 层级与分界不一致:提示但不断言(启发式标尺,防误杀)
+        elif 0 <= t_score <= 1 and _tier_of(t_score) != tier:
+            # 层级与分界不一致:提示但不断言(启发式标尺,防误杀)。
+            # t_score 越界时 _tier_of 会抛 ValueError;此时上面的「不在 0-1 范围」
+            # 已足够定位问题,不再追加「推导层级为…」的迷惑错。
             errors.append(
                 f"{prefix}: 't_score'={t_score} 推导层级为 '{_tier_of(t_score)}',"
                 f"与所填 '{tier}' 不一致(0.55≤safe<0.81 / 0.35≤differentiated<0.55 / <0.35 innovative)"
@@ -777,14 +796,19 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     return ("PASS", hard_errors, soft_warnings)
 
 
-def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
-    """检查单个 step 的产物完整性。返回 (passed, errors)。"""
+def check_step(workdir: str, step: str, _from_all: bool = False) -> tuple[bool, list[str]]:
+    """检查单个 step 的产物完整性。返回 (passed, errors)。
+
+    _from_all 私有参数:当本函数由 check_step("all") 递归调用时为 True,
+    用于跳过 topic_scores / anti_collapse / interaction_log / rerun_record 等
+    「已被 --step all 顶层统一调用」的 helpers,避免同一错误双前缀重复上报。
+    """
     workdir_path = Path(workdir)
 
     if step == "all":
         all_errors = []
         for s in ["1", "2a", "2b", "2c", "3a", "3b", "4", "5", "6"]:
-            passed, errors = check_step(workdir, s)
+            passed, errors = check_step(workdir, s, _from_all=True)
             if not passed:
                 all_errors.extend([f"[step {s}] {e}" for e in errors])
         ts_passed, ts_errors = check_topic_scores(workdir_path)
@@ -868,7 +892,9 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
     if rule.get("ban_placeholders"):
         errors.extend(check_placeholders(content, f"Step {step}"))
 
-    if step == "3a":
+    if step == "3a" and not _from_all:
+        # _from_all=True 时由 check_step("all") 顶层统一调用,
+        # 此处跳过以避免同一错误双前缀([step 3a] + [topic_scores.json])重复上报。
         ts_passed, ts_errors = check_topic_scores(workdir_path)
         if not ts_passed:
             errors.append("--- topic_scores.json 校验失败 ---")
@@ -899,14 +925,16 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
 
     if step == "6":
         errors.extend(check_step6_quality(content))
-        il_passed, il_errors = check_interaction_log(workdir_path)
-        if not il_passed:
-            errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
-            errors.extend(il_errors)
-        rr_passed, rr_errors = check_rerun_record(workdir_path, file_path)
-        if not rr_passed:
-            errors.append("--- 复跑授权校验失败 ---")
-            errors.extend(rr_errors)
+        if not _from_all:
+            # 与 check_topic_scores 同理:_from_all 时由 --step all 顶层统一调用。
+            il_passed, il_errors = check_interaction_log(workdir_path)
+            if not il_passed:
+                errors.append("--- 交互留痕校验失败(5 闸须有用户确认原话,禁止未交互交付)---")
+                errors.extend(il_errors)
+            rr_passed, rr_errors = check_rerun_record(workdir_path, file_path)
+            if not rr_passed:
+                errors.append("--- 复跑授权校验失败 ---")
+                errors.extend(rr_errors)
 
     # 2c 额外:至少 3 条证据来源
     if step == "2c":

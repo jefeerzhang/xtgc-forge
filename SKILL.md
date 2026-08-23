@@ -98,13 +98,15 @@ flowchart TD
 
 **正文顺序(先亮题)**:题目 → 为什么 → 意义 → 假设 → 假设依据 → 怎么做。  
 **硬规则摘要**:充分论述(禁止一句话);附录 A 矩阵不可用「详见 Step2b」代替;`check_step --step 6` 校验字数/段落/矩阵行/占位符。  
-**复跑**:仅当用户明确沿用 + 存在 `00_复跑决策记录.md` 且文献/收窄未变;否则仍 5 闸(见 delivery-spec §5)。
+**复跑**:仅当用户明确沿用 + 存在 `00_复跑决策记录.md` 且文献/收窄未变;否则仍 5 闸(见 delivery-spec §5)。**复跑模式:5 闸全部仍须各停一次(L399 硬规则优先)。**
 
 **复跑纪律(v0.3.10)**:①**附录 F 决策表不是当次授权**——它是历史记录;复跑授权必须由 `00_复跑决策记录.md`(含用户当次原话 + 时间)提供;②`check_step --step 6` 校验:声明复跑却无复跑记录 / 复跑记录是空壳(占位符、无原话、无时间)→ FAIL;③复跑 ≠ 无留痕:interaction-log 仍须 5 闸各一条确认(状态标「已确认·复跑授权」)。
 
 ### 交互留痕(v0.3.9 · 5 闸的证据,硬规则)
 
 **5 次 Checkpoint 每次暂停/确认,必须写 `interaction-log.md`**(每闸一行,含用户原话)。规则:
+
+**「明确确认」** = 用户原话含「确认」/「通过」/「选 X」/「OK」/「同意」之一;「继续」「好的」「嗯」不算。
 
 1. **先写日志,再进下一步**——每次闸门暂停、用户确认后,立即追加一行 `| 闸门 | 已确认 | 时间 | 用户原话 |`,禁止拖到结尾补记
 2. **只记用户实际说过的原话**,禁止代填、禁止写「用户无异议」;占位符(< > / 待填)不算确认
@@ -114,6 +116,8 @@ flowchart TD
 ---
 
 ## 三问启动(Phase 0,BLOCKING)
+
+调用 `research-method-selector` 子 skill 推断 branch(推断性 / 描述性 / 质性 / 混合)。
 
 **不要直接进入文献处理**。在读取用户 PDF 之前,先问 3 个问题:
 
@@ -135,9 +139,11 @@ flowchart TD
 ```
 
 **方式 B · Grill 机制(分次问)**:
-如果用户输入很薄,用 grill-me 风格:一次只问 1 个,等用户回答后再问下一个。每个问题附推荐答案。
+如果用户输入很薄,用分次追问法:一次只问 1 个,等用户回答后再问下一个。每个问题附推荐答案。**注:Grill = 闸门内的子问;与 Phase 0 分次问法(一次只问 1 个)不同。**
 
 ### 输入过薄的处置
+
+**输入过薄阈值**:≥ 1 完整子句(≥ 8 字)+ ≥ 1 个研究对象(如 ESG / 碳排放 / 绿色金融);不达标则停在 Phase 0。
 
 若用户拒绝回答或输入过薄,**停在 Phase 0,不硬编**。告诉用户:
 "需要至少 1 句话的'关心的问题'才能启动。你可以简单说:我在研究 X 方向,想找 Y 类的题目。"
@@ -252,7 +258,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 - 预期效应方向
 - **研究类型标签**(推断性 / 描述性 / 质性)
 - **降级条件**(什么情况下退到备选)
-- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative,见「反坍缩机制」)
+- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative):inline 启发式:0.81–1.0 safe(已知区主效应);0.51–0.80 differentiated(有方向但需机制);≤0.50 innovative(新机制或边界探索)。同期展开字段:`t_score` in topic_scores.json / Gap-C1 = Step 2c 五类 Gap 第 1 类「已知区」/ Checkpoint #N = 5 闸强制暂停第 N 闸。详见「反坍缩机制」。
 
 **2 备选**:降级场景的备选,每个含:
 - 来源 Gap
@@ -288,7 +294,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 
 **问题**:AI 选题会「坍缩」——无论给什么 gap,都收敛到「X 对 Y 的影响——基于 A 股上市公司」这类最安全、最可预测的题目。**防法:先点名最安全题,再主动向低典型性方向采样。**
 
-完整方法论:`references/anti-collapse.md`。借鉴 Diverga(MIT)的 VS 方法,已中文社科实证化。**执行三阶段**:
+完整方法论:`references/anti-collapse.md`。借鉴 Diverga(MIT)的 VS(Verbalized Sampling)方法,已中文社科实证化。**执行三阶段**:
 
 ### Phase 1 · 模态识别(必做)
 
@@ -351,7 +357,7 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 
 ### 独立审查机制(v0.2.7,自 v0.3.18 起降级为过程建议)
 
-借鉴 RTS v1.5.2 的独立审查分离做法:**"推荐由独立 subagent 填 verdict",但承认本 skill 没有密码学保证**,不当作不可绕过的刚性闸门。
+借鉴 RTS(Research Topic Skills)v1.5.2 的独立审查分离做法:**"推荐由独立 subagent 填 verdict",但承认本 skill 没有密码学保证**,不当作不可绕过的刚性闸门。
 
 ```
 Step 2c 完成 → 生成 review_scan.md 模板(由 scripts/review.py)
@@ -515,6 +521,8 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ### Step 2a · 读 PDF 提要点(无 PDF 跳过)
 
+调用 `bilingual-paper-reader` 子 skill 读 PDF(每篇产 1 张要点卡)。
+
 **核心原则**:优先抽取 PDF **文字层**得到真实文本;不做 OCR;不自动检索。
 
 **适用条件**:用户提供的文献含 PDF 文件。
@@ -545,7 +553,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ### Step 2c · 出 gap 裁定(本 skill 自写)
 
-**方法论参考**:JARS / PRISMA 2020 / DA-RT 公开学术标准(参见 `references/methodology-sources.md`)。
+**方法论参考**:JARS(Journal Article Reporting Standards,APA)/ PRISMA 2020(Preferred Reporting Items for Systematic Reviews and Meta-Analyses,系统综述报告规范)/ DA-RT(Data Accessibility Research Transparency,数据可访问性与研究透明度)公开学术标准(参见 [`references/methodology-sources.md#文献综述方法论`](references/methodology-sources.md))。
 **实现原则**:通用语言,不复述任何具体条款。
 
 **动作**:从矩阵中识别 5 类 gap:
@@ -595,7 +603,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ## 🎯 主题对抗压测(可选增强,v0.3.12)
 
-**时机**:Checkpoint #3 用户点名选定后、写 `Step3b-selected-theme.md` 时。**用户说「不用」就跳过,不新增硬闸、不阻塞主路径。**
+**时机**:Checkpoint #3 用户点名选定后、写 `Step3b-selected-theme.md` 时。**AskUserQuestion(Checkpoint #3):启用主题对抗压测吗?默认 否;启用后 v0.3.12 要求的 ≥6 类攻击为强校验。**用户说「不用」就跳过,不新增硬闸、不阻塞主路径。
 
 **为什么**:主题生成后、投入假设提炼前,是质检真空——独立审查审的是文件,没人压测单个主题「到底扛不扛得住审稿人」。同行实证结论(MultiAgent-Research-Ideator,SIGDIAL 2025):**批评者并行只增多样性、反降质量;批评-修订的深度迭代才双升**。因此本机制是**单魔鬼代言人、1-2 轮深迭代**,不是开多个批判者。
 
@@ -626,12 +634,12 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ## Step 4 · 提炼研究假设(本 skill 自写)
 
-**方法论参考**:Pearl DAG / VanderWeele 反事实框架 / SESOI 公开学术标准(参见 `references/methodology-sources.md`)。
+**方法论参考**:Pearl DAG(Directed Acyclic Graphs,因果图模型)/ VanderWeele 反事实框架(Explanation in Causal Inference)/ SESOI(Smallest Effect Size of Interest,最小实质效应量)公开学术标准(参见 `references/methodology-sources.md`)。
 **实现原则**:通用语言,不复述具体条款。
 
 ### 三层假设闸(结论 → 金句 → 最险假设,v0.3.13)
 
-**提炼假设前**,先对选定主题过三关,写入 `Step4-hypotheses.md` 开头的「## 三层假设闸」小节。借鉴 Carlini 结论优先测试与研究策略原则 RS2/RS3/RS4(参见 `references/methodology-sources.md`;researcher-pack MIT 理念,经管语境改写,不复述原文):
+**提炼假设前**,先对选定主题过三关,写入 `Step4-hypotheses.md` 开头的「## 三层假设闸」小节。借鉴 Carlini 结论优先测试(How to Win a Best Paper Award)与研究策略原则 RS2(结论优先)/ RS3(单句金句)/ RS4(最险假设 1 周可测)(参见 `references/methodology-sources.md`;researcher-pack MIT 理念,经管语境改写,不复述原文):
 
 **第 1 层 · 结论优先测试(RS2)**:先写 2-3 句「理想结论」——如果研究成功,最有力的结论是什么?若写不出具体有力的结论(只能写「X 与 Y 显著相关」这类),说明选题影响不足,回到 Step 3b 换题或收窄。
 
