@@ -5,6 +5,7 @@
 确保覆盖 argparse / sys.exit / stderr 路径。
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "init_project.py"
+
+# 子进程强制 UTF-8 stdio:Windows 默认 cp936 会让中文输出乱码,测试按 utf-8 解码后断言失配
+SUBPROCESS_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 def _run(workdir: str, *extra: str):
@@ -23,6 +27,7 @@ def _run(workdir: str, *extra: str):
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=SUBPROCESS_ENV,
     )
 
 

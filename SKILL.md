@@ -260,7 +260,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 - 预期效应方向
 - **研究类型标签**(推断性 / 描述性 / 质性)
 - **降级条件**(什么情况下退到备选)
-- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative):inline 启发式:0.81–1.0 safe(已知区主效应);0.51–0.80 differentiated(有方向但需机制);≤0.50 innovative(新机制或边界探索)。同期展开字段:`t_score` in topic_scores.json / Gap-C1 = Step 2c 五类 Gap 第 1 类「已知区」/ Checkpoint #N = 5 闸强制暂停第 N 闸。详见「反坍缩机制」。
+- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative):inline 启发式:0.55–0.80 safe(加情境/调节/聚焦子样本,可保底发表);0.35–0.55 differentiated(新机制/边界条件/政策组合);<0.35 innovative(挑战主流假设/反向因果);≥0.80 为模态区,应避免。同期展开字段:`t_score` in topic_scores.json / Gap-C1 = Step 2c 五类 Gap 第 1 类「已知区」/ Checkpoint #N = 5 闸强制暂停第 N 闸。详见「反坍缩机制」。
 
 **2 备选**:降级场景的备选,每个含:
 - 来源 Gap

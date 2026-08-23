@@ -7,6 +7,7 @@
   出来的项目误报 FAIL。
 - 收紧为 `r"<请填写或修改>"`(尖括号锚定)后,模板中无尖括号的提醒不应触发占位符拦截。
 """
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INIT_SCRIPT = ROOT / "scripts" / "init_project.py"
 CHECK_SCRIPT = ROOT / "scripts" / "check_step.py"
+
+# 子进程强制 UTF-8 stdio:Windows 默认 cp936 会让中文输出乱码,测试按 utf-8 解码后断言失配
+SUBPROCESS_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 def _run_init(workdir):
@@ -25,6 +29,7 @@ def _run_init(workdir):
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=SUBPROCESS_ENV,
     )
 
 
@@ -36,6 +41,7 @@ def _run_check(workdir, step):
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=SUBPROCESS_ENV,
     )
 
 

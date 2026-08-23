@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""金样例集成断言:主报告闸 PASS + --step all 恰好 2 个失败条目(仅 Step2a/5)。"""
+"""金样例集成断言:主报告闸 PASS + --step all 恰好 1 个失败条目(仅 Step2a)。"""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -8,6 +9,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "examples" / "漂绿治理-绿贷与环境税组合"
 SCRIPT = ROOT / "scripts" / "check_step.py"
+
+# 子进程强制 UTF-8 stdio:Windows 默认 cp936 会让中文输出乱码,测试按 utf-8 解码后断言失配
+SUBPROCESS_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 def _run(step):
@@ -18,6 +22,7 @@ def _run(step):
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=SUBPROCESS_ENV,
     )
 
 
