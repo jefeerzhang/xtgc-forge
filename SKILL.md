@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.18"
+version: "0.3.19"
 license: MIT
 ---
 
-# 选题工坊 v0.3.18
+# 选题工坊 v0.3.19
 
 ## 📊 流水线一览(图)
 

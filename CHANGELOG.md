@@ -3,6 +3,41 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.19 · 2026-08-23 · 三轮 code review 收口 51 项(规范-脚本-样例闭环)
+
+**主线**:v0.3.18 的"诚实化运动"让规范对用户说真话,但仓库自己还有大量「规范说一套,代码做另一套」的不一致——spec 上写 Checkpoint #5 在 Step 6 之前,文本流程图却写在 Step 6 之后;verdict 正则会贪婪吃掉中文句读,`verdict: PASS,继续` 被静默判 FAIL;`init_project.py` 只要 `00_任务元信息.md` 不在就静默覆盖已写的 Step 1–5;SKILL.md 文件树列出两个 vendor 子 skill 但 Step 2a/Phase 0 正文从没调用它们。这些 latent 问题让「Skill 写一套对的事,Agent 跑出另一套对的事」同时成立,用户被骗不动但结果不可信。本次对仓库做三轮 code review(规范 / 脚本 / 样例,三个并行的 general-purpose agent),收口 51 项,效果是把 Skill spec、Python script、黄金样例三者之间的所有关键路径都用测试和样例内容实际覆盖,事后任何一处规范说「应如此」都在代码或样例里有对应证据。
+
+1. **第 1 轮 — 阻塞级(9 项)**
+   - **流程图 Checkpoint #5 顺序对齐**(SKILL.md L239-241):文本 ASCII 流程图原写 `Step 5 → Checkpoint #5 → Step 6`,Mermaid 块写 `Step 5 → Step 6 → Checkpoint #5`,agent 两次读到相反顺序会随机选一种执行。本次以 Mermaid 为准,文本图改为同序,避免 agent 出现"先审后产出"
+   - **`verdict` 正则贪婪捕获**(check_step.py:693/722/734):原 `[^\s\*\`]+` 把 `verdict: PASS,继续` 捕获成 `PASS,继续` → 不在合法集 → 硬 FAIL。锚定为 `REVIEW_VALID_VERDICTS`(单一真源 = `{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}`),中文自然写法不再误判
+   - **`init_project.py` 静默覆盖**(init_project.py:436-462):原检查只挡 `00_任务元信息.md`,目录里有 `Step1-input.md` 等半成品时会被整盘覆盖。新增 `TRACKED_FILES` 16 项 + `--force` 闸门,`sys.exit(1) + stderr` 提示,`--force` 才覆盖并列出受影响文件
+   - **`--workdir ~` 解析**(check_step.py:931-934):`os.path.isdir(args.workdir)` 不展开 `~`,与 `init_project.py` / `review.py` 的 `.expanduser().resolve()` 不一致,导致 `--workdir ~/projects/x` 误报"目录不存在"。入口处统一 `.expanduser().resolve()`
+   - **v0.2.X 变更日志去重**(SKILL.md L806-826):v0.2.7 同一行出现 3 次,描述互相冲突(`独立审查分离` / `安装链路修复` / 重复块)。合并为单行,删除整段重复块;行为归属从此可被 agent 一眼查到
+   - **`用户决策` 措辞歧义**(SKILL.md L281):"看 total 分数,选最高的"读起来像让 agent 代选算法,与 L455(原 L453)`禁止默认选 total 最高项`硬规则直接冲突。改为「用户决策建议」(建议性语气),强制用户**显式点名**(`选候选 2`)并加 L455 交叉引用
+   - **黄金样例 `Step3b` 对抗压测 2 → 9 类**:原 2 类(`识别策略` / `理论增量`),spec 要求 ≥ 6 类攻击。扩展到 spec §7.1 全部 9 类(识别 / 贡献类型 / 换情境 / 换术语 / 已被占 / 数据质量 / 不可行 / 不可证伪 / 范围过宽),每类 1 句攻击 + 1 句回应 + 1 个生存标签(PASS / TIGHTEN / RERUN / REFRAME / DROP),综合 6 存活 / 3 需收窄
+   - **恢复 `Step5-identification-strategy.md`**(黄金样例):该文件 v0.3.18 时被折进主报告附录 E 只剩 8 行,用户追溯 H1–H5 的识别细节要回主报告翻。独立为 `process/Step5-identification-strategy.md`(89 行,每假设 200–400 字,覆盖基准回归 / 内生性来源 + 主识别 / 一句话稳健性清单),主报告附录 E 保留紧凑版作交叉引用
+   - **黄金样例补充**:其余格式瑕疵(Q2/H1–H5 裸 ID、L823 "鲁班方案 A" 历史归属保留等)在后续轮次统一处理
+
+2. **第 2 轮 — 重要级(21 项)**:**SKILL.md 9 项 + 脚本 8 项 + 黄金样例 4 项**。
+   - **SKILL.md**:复跑定义补「5 闸全部仍须各停一次(L399 优先)」(m1);`grill-me` 与 `Grill` 双义显式区分(Phase 0 = 分次追问法,Grill = 闸门内子问)(m2);Phase 0 显式调用 `research-method-selector`,Step 2a 显式调用 `bilingual-paper-reader`(m3);7 个首字母缩写首现展开(PRISMA 2020 / JARS / DA-RT / Pearl DAG / VanderWeele / SESOI / Carlini / RS2/RS3/RS4 / RTS v1.5.2 / VS)(m4);T-Score 内联 60-80 字启发式阈值 + t_score/Gap-C1/Checkpoint 同期展开(m5);「明确确认」定义(用户原话含「确认/通过/选 X/OK/同意」之一,「继续/好的/嗯」不算)(m6);对抗压测 opt-in 显式 `AskUserQuestion`(m7);`输入过薄` 阈值 ≥ 1 完整子句 + ≥ 1 个研究对象(m8);`methodology-sources.md` 加 section 锚点(m9)
+   - **脚本**:`--workdir` 是文件时 `sys.exit(1)` 防 path traversal(s1);`PLACEHOLDER_PATTERNS` 加组合正则 + 锚定尖括号(s2);`--step all` 用 `_from_all` 标记去重,s3a/6 的 helpers 只跑一次(s3);`_extract_section` 接受 `#{1,6}` 同级比较(s4);`_count_matrix_data_rows` 用前后 `|` 边界的 Markdown 行检测 + 全行「作者+年份」头检测(s5);`check_placeholders` 标签改为中性 `main` 避免重复 `Step6:` 前缀(s6);`is_empty` 用 `PLACEHOLDER_PATTERNS_RE` 替代 substring 检查(s7);`_tier_of` 超界(`≤ 0` 或 `≥ 1`)抛 `ValueError`,`check_anti_collapse` 仍不崩溃(s8)
+   - **黄金样例**:§2.5 决策链裸 ID → 「政策组合候选（候选 2）/ 五条假设」(g1);H5 SESOI 锚定到 L3/L4 已报告 DID 主效应下界(≥ 25% 主效应),其余 4 条保留探索性(g2);附录 B 加 Step 2a 要点卡合并说明(g3);§3.1 第三主张删冗余 1 句(披露质量可比性已述于 §2.3)(g4)
+
+3. **第 3 轮 — 轻微级(21 项)**:**SKILL.md 13 项 + 脚本 8 项**。
+   - **SKILL.md**:frontmatter 与正文 section 名「依据」→「假设依据」(mi1);`鲁班三刀` → `三件加固`(mi2);`P1 复现性` 补全(m3);`半强校验` → `条件校验`(mi4);--branch 可选值注释推断性/描述性/质性/混合(m5);`生成 11 个模板` 改为 16 文件名显式枚举(m6);RTS 首次出现补全 Research Topic Skills(m7);Diverga 加交叉指针(m8);`诚实声明` 方括号标记为已知局限附注(m9);三条「禁止」规则统一为「反跳过三铁律 · 三不可」(mi10);变更日志顶加金样例缺省状态对账(mi11);`已确认·复跑授权` 声明为字面 token + 匹配正则(mi12);v0.2.7 时间序澄清(mi13)
+   - **脚本**:删 init_project.py / review.py 未用 `import os`(mi14/15);`BODY_JARGON` 全/半角括号统一为 `(?:[\(（]\s*探索性\s*[\)])` 同步匹配(mi16);`--branch` / `--language` argparse choices(mi17);`_strip_md_structure` 改为按词边界移除 `\`*_+`,保留 `snake_case` / `4*5` / `x*2` 中字符(mi18);5 个 magic numbers 提为模块常量(`MIN_PARAGRAPH_CHARS=40` / `ANTI_COLLAPSE_LOW_TIER=0.50` / `RERUN_EMPTY_THRESHOLD=30` / `MIN_REVEALS_LEN=8` / `MAX_BODY_SENTENCE=100`)(mi19);`check_step()` 137 行拆为 4 个 per-step rule 函数 + `STEP_RULES` 字典调度(mi20);review.py 打印的 `--workdir` 提示改为已解析绝对路径(mi21)
+   - **历史归属保护**:v0.2.7 changelog entry 中"鲁班方案 A"(mi2 之外、专为历史归属保留)按 m3 历史型修复不动,避免删除历史借词导致 v0.2.x 引用脱节
+
+4. **测试覆盖率**:17 → 21 → 30 → 33 passed(每次提交后)。新增 6 文件:`test_init_overwrite.py`(s3/f 合并,4 case)、`test_workdir_is_file_rejected.py`(s1)、`test_template_placeholders_not_flagged.py`(s2,2 case)、`test_anti_collapse_tier_out_of_band.py`(s8,4 case)、`test_extract_section_h3.py`(s4,2 case)、`test_review.py`(mi21,3 case)
+
+5. **不破坏**:5 个 Checkpoint / 6 道防线 / 六段式主报告闸 / 反坍缩·反黑箱·反黑话校验全部保留;`--step 6` 与 `--step all` 在黄金样例上结果与 v0.3.18 一致(Step 6 PASS;--step all 仅 Step 2a 仍 FAIL,系金样例无 PDF 输入的有意缺省);`check_ready.sh` 跨文件对账 / `verify_workdir` / `_resolve_workdir_file` / review 三态返回全部沿用
+
+6. **版本**:SKILL.md frontmatter `version: "0.3.18"` → `"0.3.19"` + 标题 + README 版本徽章 + CHANGELOG 顶部 + `check-ready.sh` 自取 frontmatter(自动跟随,无需手动改 banner)
+
+7. **三轮提交**:`0922d41`(pass 1 阻塞)→ `73c0e93`(pass 2 重要)→ `19f04d2`(pass 3 轻微),已依次 `git push origin main`,远程 `main: d90f53e..19f04d2`
+
+---
+
 ## v0.3.18 · 2026-08-23 · 审查降级为过程建议 + 版本对账(诚实化运动)
 
 **主线**:之前 SKILL.md 把"独立审查"说成"刚性闸门",但 CHANGELOG v0.2.7 已经诚实承认 verdict "没有密码学身份保证"、"理论上审查者也可伪造"。这个矛盾让用户产生虚假合规感。本次把审查定位从「不可绕过的硬关」降级为「强烈推荐的过程建议」,让用户的期望与机器实际能保证的范围对齐。同时加 `check-ready.sh` 版本对账,解决「双来源 skill 谁先加载」的新手排错痛点。

@@ -9,7 +9,7 @@
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version: v0.3.18](https://img.shields.io/badge/Version-v0.3.18-blue)](CHANGELOG.md)
+[![Version: v0.3.19](https://img.shields.io/badge/Version-v0.3.19-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
