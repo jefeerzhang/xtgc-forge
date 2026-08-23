@@ -670,49 +670,94 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
-def check_review(workdir: Path, target: str) -> tuple[bool, list[str]]:
-    """校验 review_{target}.md 是否 PASS。"""
-    errors = []
+# v0.3.17 审查降级:从"刚性闸门"降为"过程建议"
+# 返回 (status, hard_errors, soft_warnings)
+#   status=PASS   无硬错,verdict 字段有效
+#   status=WARN   无硬错,但有软警告(如文件缺失、verdict=FAIL、P0 缺具体项)
+#   status=FAIL   有硬错(verdict 字段缺失、值非法)
+# 调用方应只把 status=FAIL 视为阻塞;WARN 仅打印提示,不阻塞 --step all
+REVIEW_VALID_VERDICTS = {"PASS", "P0_OPEN", "FAIL", "NEEDS_HUMAN"}
+
+
+def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]:
+    """校验 review_{target}.md 状态。
+
+    v0.3.17 起降级为"过程建议":
+    - 文件缺失 / 信任边界声明缺失 / reviewer ID 未替换 都不再视为硬错,只 WARN
+    - verdict 缺失或值不在 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN} 才视为硬错(FAIL)
+    - verdict=FAIL 或 verdict=P0_OPEN 缺具体 P0 列表也只 WARN(用户已说"不行",无需机器拦)
+    - verdict=PASS 但 reviewer 仍是模板占位符 <hash>,只 WARN(诚实声明这不算合规)
+    """
+    hard_errors: list[str] = []
+    soft_warnings: list[str] = []
     review_file = _resolve_workdir_file(workdir, f"review_{target}.md")
 
     if not review_file.exists():
-        return (
-            False,
-            [
-                f"review_{target}.md 不存在,请用 scripts/review.py 生成模板,由独立子 agent 填入 verdict"
-            ],
+        soft_warnings.append(
+            f"⚠️  review_{target}.md 不存在(过程建议,推荐跑 scripts/review.py --target {target} 后由独立 subagent 填 verdict);不阻塞交付"
         )
+        return ("WARN", hard_errors, soft_warnings)
 
     content = review_file.read_text(encoding="utf-8")
 
-    if "verdict" not in content.lower():
-        errors.append("缺少 verdict 字段")
-
-    has_pass = (
-        "verdict:**`PASS`" in content
-        or "verdict:`PASS`" in content
-        or "verdict:PASS" in content
-        or "**verdict**:`PASS`" in content
+    # ----- 硬错:verdict 字段本身有问题 -----
+    # 先用宽正则抓"verdict: <任何非空白串>"行,再判断值是否合法
+    verdict_row = re.search(
+        r"verdict\s*:\s*\**\s*\`?\s*([^\s\*\`]+)\s*\`?",
+        content,
+        re.IGNORECASE,
     )
-    has_p0 = "P0_OPEN" in content or "P0-OPEN" in content
+    if not verdict_row:
+        hard_errors.append(
+            "review_" + target + ".md 缺少 verdict 字段(需 `verdict: PASS|P0_OPEN|FAIL|NEEDS_HUMAN`)"
+        )
+        return ("FAIL", hard_errors, soft_warnings)
 
-    if not has_pass and not has_p0:
-        errors.append("verdict 字段未填写 PASS / P0_OPEN / FAIL")
-    elif has_p0:
+    verdict = verdict_row.group(1).upper()
+    if verdict not in REVIEW_VALID_VERDICTS:
+        hard_errors.append(
+            f"verdict 值 {verdict!r} 不在合法集合 {{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}} 内(v0.3.17 起需要写明 verdict 类型)"
+        )
+        return ("FAIL", hard_errors, soft_warnings)
+
+    # ----- 软警告 -----
+    if verdict == "FAIL":
+        soft_warnings.append(
+            f"review_{target}.md verdict=FAIL(审查者明确拒收;推荐按其理由修后重审或重跑)"
+        )
+
+    if verdict == "P0_OPEN":
         if "P0-1" not in content and "P0-2" not in content:
-            errors.append("verdict=P0_OPEN 但未列出具体 P0 问题")
+            soft_warnings.append(
+                f"review_{target}.md verdict=P0_OPEN 但未列出具体 P0 问题(推荐补 P0-1 / P0-2 等条目)"
+            )
+
+    if verdict == "NEEDS_HUMAN":
+        soft_warnings.append(
+            f"review_{target}.md verdict=NEEDS_HUMAN(独立 subagent 自承拿不准,推荐人类专家复核)"
+        )
 
     if "reviewer" not in content.lower():
-        errors.append("缺少审查者 ID(reviewer-<hash>)")
+        soft_warnings.append(
+            f"review_{target}.md 缺审查者 ID(可填 reviewer-<hash> 占位)"
+        )
 
     if "密码学身份保证" not in content and "信任边界" not in content:
-        errors.append("缺少信任边界声明")
+        soft_warnings.append(
+            f"review_{target}.md 缺信任边界声明(v0.3.17 推荐保留,即使不做密码学保证)"
+        )
 
-    # 模板未填
-    if re.search(r"reviewer-<hash>", content) and has_pass:
-        errors.append("审查者 ID 仍为模板 reviewer-<hash>,须替换为真实 reviewer id")
+    # verdict=PASS 但 reviewer 仍是模板占位符 <hash> —— 这本是合规问题,降级为软警告
+    if re.search(r"reviewer-<hash>", content) and verdict == "PASS":
+        soft_warnings.append(
+            f"review_{target}.md verdict=PASS 但 reviewer 仍是模板占位符 <hash>(诚实声明:不可作合规依据,只作过程留痕)"
+        )
 
-    return (len(errors) == 0, errors)
+    if hard_errors:
+        return ("FAIL", hard_errors, soft_warnings)
+    if soft_warnings:
+        return ("WARN", hard_errors, soft_warnings)
+    return ("PASS", hard_errors, soft_warnings)
 
 
 def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
@@ -739,10 +784,15 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
             rr_passed, rr_errors = check_rerun_record(workdir_path, main_report)
             if not rr_passed:
                 all_errors.extend([f"[复跑授权] {e}" for e in rr_errors])
+        # v0.3.17 审查降级:review 缺失/警告不再阻塞 --step all,仅做过程留痕
         for rt in ["scan", "topics"]:
-            r_passed, r_errors = check_review(workdir_path, rt)
-            if not r_passed:
-                all_errors.extend([f"[review_{rt}.md] {e}" for e in r_errors])
+            r_status, r_hard, r_soft = check_review(workdir_path, rt)
+            if r_status == "FAIL":
+                all_errors.extend([f"[review_{rt}.md] {e}" for e in r_hard])
+            elif r_soft:
+                # 软警告写到 stderr 风格前缀,便于 grep,但不算错
+                for w in r_soft:
+                    print(f"[review_{rt}.md] {w}", file=sys.stderr)
         return (len(all_errors) == 0, all_errors)
 
     if step == "scores":
@@ -752,10 +802,23 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         return (ts_passed and ac_passed, combined)
 
     if step == "scan-review":
-        return check_review(workdir_path, "scan")
+        # v0.3.17 审查降级:3-tuple,只在 FAIL 时 sys.exit(1);WARN 仍返回 True
+        status, hard, soft = check_review(workdir_path, "scan")
+        if soft:
+            for w in soft:
+                print(w, file=sys.stderr)
+        if status == "FAIL":
+            return (False, hard)
+        return (True, [] if status == "PASS" else hard)  # WARN 也算过(只打印)
 
     if step == "topics-review":
-        return check_review(workdir_path, "topics")
+        status, hard, soft = check_review(workdir_path, "topics")
+        if soft:
+            for w in soft:
+                print(w, file=sys.stderr)
+        if status == "FAIL":
+            return (False, hard)
+        return (True, [] if status == "PASS" else hard)
 
     if step not in GATES:
         return (False, [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"])

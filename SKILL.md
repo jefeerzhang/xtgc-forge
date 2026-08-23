@@ -318,9 +318,9 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 
 **与 Checkpoint #3 的关系**:校验是机器闸门,不替代你点名。Grill 追问新增一条:「候选里最'反直觉'的是 X,你敢做吗?」选中安全层时,主报告须写明「差异化不足、以保底为主」的自我认知。
 
-## 🚦 刚性闸门 + 独立审查
+## 🚦 机器闸门 + 独立审查(过程建议)
 
-每个 Step 完成后,**必须**通过 `scripts/check_step.py` 校验,才能进入下一步。
+每个 Step 完成后,**推荐**通过 `scripts/check_step.py` 校验。机器闸门只校验文件结构 / 关键词 / 长度 / 占位符 / 矩阵行,不能取代人的判断。
 
 ```bash
 # 初始化项目目录(可选但推荐)
@@ -332,9 +332,9 @@ python scripts/check_step.py --workdir <你的工作目录> --step 3a
 # 单独校验 topic_scores.json
 python scripts/check_step.py --workdir <你的工作目录> --step scores
 
-# 独立审查(scan / topics 阶段必须独立子 agent 跑)
+# 独立审查模板(scan / topics 阶段建议跑独立 subagent 填 verdict)
 python scripts/review.py --workdir <dir> --target scan   # 生成 review_scan.md 模板
-python scripts/check_step.py --workdir <dir> --step scan-review  # 校验 verdict
+python scripts/check_step.py --workdir <dir> --step scan-review  # 校验 verdict 文件存在
 
 # 一次性校验全部(含 topic_scores + review)
 python scripts/check_step.py --workdir <你的工作目录> --step all
@@ -343,25 +343,41 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 **校验规则**:
 - `Step 1-6`:每 Step 关键词 + 计数(见 GATES 字典)
 - `Step 3a` 额外校验 `topic_scores.json`(6 维评分 + decision)
-- `Step 2c 后`:生成 `review_scan.md`,由**独立子 agent**(reviewer ≠ producer)填入 PASS / P0_OPEN / FAIL verdict
-- `Step 4 后`:生成 `review_topics.md`,同上独立审查
+- `Step 2c 后`(可选):生成 `review_scan.md`,建议由**独立 subagent**(reviewer ≠ producer)填入 PASS / P0_OPEN / FAIL / **NEEDS_HUMAN** verdict
+- `Step 4 后`(可选):生成 `review_topics.md`,同上
+- `--step all` 会把缺失的 `review_scan.md` / `review_topics.md` 报为 ⚠️ 警告(不阻塞交付),见下文"审查作为过程建议"
 
-### 独立审查机制(v0.2.7)
+### 独立审查机制(v0.2.7,自 v0.3.17 起降级为过程建议)
 
-借鉴 RTS v1.5.2 的强制独立审查分离:
+借鉴 RTS v1.5.2 的独立审查分离做法:**"推荐由独立 subagent 填 verdict",但承认本 skill 没有密码学保证**,不当作不可绕过的刚性闸门。
 
 ```
 Step 2c 完成 → 生成 review_scan.md 模板(由 scripts/review.py)
        ↓
-调独立子 agent 填 verdict(reviewer context 必须空,不含产出过程)
+(推荐)调独立 subagent 填 verdict(reviewer context 应空,不含产出过程)
        ↓
-check_step.py --step scan-review 校验 verdict
+check_step.py --step scan-review 校验 verdict 文件存在 + 含合法 verdict 字段
        ↓
-PASS → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮)
+PASS / NEEDS_HUMAN → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮) | FAIL → 用户决定是否重跑
 ```
 
-**信任边界**(诚实声明):verdict 由独立子 agent 填写,理论上审查者也可伪造。完整闭合需受控 runner 外部登记审查行为,超出本 skill 范围(同 RTS v1.5.2 残留)。
+### 审查作为过程建议(降级说明,v0.3.17)
 
+`scripts/check_step.py --step scan-review` / `--step topics-review` 现在只校验:
+
+1. `review_*.md` 文件存在
+2. 含 `verdict:` 字段,值在 `{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}` 集合内
+3. 含 `reviewer-<hash>` 标记(不必真实存在,模板占位即可)
+4. verdict=P0_OPEN 时需列出 P0-1 / P0-2 等具体问题
+
+**为什么降级**(诚实声明):
+
+- 现状的"独立审查"实质是让 Agent 起一个 subagent、给它一份空 context。**没有密码学身份保证**,verdict 由谁写、是否真独立、是否真未参考 producer 上下文,都没法机器验证。CHANGELOG v0.2.7 也承认这是 RTS v1.5.2 的同款残留。
+- 把"刚性闸门"措辞降级为"过程建议",避免给用户虚假的合规感。审查仍**强烈推荐**(尤其金样例这种对外发布场景),但不当作不可绕过的硬关。
+- 新增 `NEEDS_HUMAN` verdict 值:审查者明确说"我(独立 subagent)拿不准,需要人类专家复核"——比伪造一个 PASS 更诚实。
+- 完整闭合需要受控 runner 外部登记审查行为(host fingerprint + 时间戳 + hash 链),这超出本 skill 范围,见 v0.2.7 CHANGELOG 同款说明。
+
+verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函数。
 ## 🛑 强制 5 次 Checkpoint(硬规则,v0.2.9)
 
 **跑全部时必须完整经过 5 次用户确认,缺一不可。**
