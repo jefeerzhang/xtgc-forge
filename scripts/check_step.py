@@ -624,9 +624,9 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
-# T-Score 典型性分界(与 references/anti-collapse.md 一致)
+# T-Score 典型性分界(与 references/anti-collapse.md 一致:≥0.80 为模态区,应避免)
 TIER_BANDS = {
-    "safe": (0.55, 0.81),  # 0.55 ≤ t < 0.81
+    "safe": (0.55, 0.80),  # 0.55 ≤ t < 0.80
     "differentiated": (0.35, 0.55),
     "innovative": (0.0, 0.35),
 }
@@ -644,7 +644,7 @@ def _tier_of(t_score: float) -> str:
     for tier, (lo, hi) in TIER_BANDS.items():
         if lo <= t_score < hi:
             return tier
-    return "safe"  # t ≥ 0.81 一律视为模态/安全层
+    return "safe"  # t ≥ 0.80 落入模态区;candidate 层级枚举无 modal,归为 safe(模态题由 Phase 1 模态识别拦截)
 
 
 def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
@@ -686,13 +686,13 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
             errors.append(f"{prefix}: 缺少 'tier'(safe/differentiated/innovative)")
         elif tier not in valid_tiers:
             errors.append(f"{prefix}: 'tier'='{tier}' 非法,应为 safe/differentiated/innovative")
-        elif 0 <= t_score <= 1 and _tier_of(t_score) != tier:
+        elif 0 <= t_score <= 1 and (derived := _tier_of(t_score)) != tier:
             # 层级与分界不一致:提示但不断言(启发式标尺,防误杀)。
             # t_score 越界时 _tier_of 会抛 ValueError;此时上面的「不在 0-1 范围」
             # 已足够定位问题,不再追加「推导层级为…」的迷惑错。
             errors.append(
-                f"{prefix}: 't_score'={t_score} 推导层级为 '{_tier_of(t_score)}',"
-                f"与所填 '{tier}' 不一致(0.55≤safe<0.81 / 0.35≤differentiated<0.55 / <0.35 innovative)"
+                f"{prefix}: 't_score'={t_score} 推导层级为 '{derived}',"
+                f"与所填 '{tier}' 不一致(0.55≤safe<0.80 / 0.35≤differentiated<0.55 / <0.35 innovative)"
             )
 
     selected = [c for c in candidates if c.get("decision") == "selected"]

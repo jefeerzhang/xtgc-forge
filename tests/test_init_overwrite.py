@@ -59,3 +59,17 @@ def test_init_then_refuse_then_force_overwrites():
         overwritten = (Path(workdir) / "Step1-input.md").read_text(encoding="utf-8")
         assert "用户已编辑的内容" not in overwritten, "--force 后模板应替换用户内容"
         assert "Step 1" in overwritten or "模糊领域" in overwritten, "应为模板内容"
+
+
+def test_delivery_note_alone_triggers_overwrite_protection():
+    """目录里只有 00_交付说明.md(TRACKED_FILES 成员)时,init 也应拒绝覆盖。"""
+    with tempfile.TemporaryDirectory() as d:
+        workdir = Path(d) / "proj"
+        workdir.mkdir()
+        note = workdir / "00_交付说明.md"
+        note.write_text("# 用户自己的交付说明\n", encoding="utf-8")
+
+        r = _run(str(workdir))
+        assert r.returncode == 1, f"仅有 00_交付说明.md 时也应拒绝:\n{r.stdout}{r.stderr}"
+        assert "工作目录已存在项目文件" in r.stderr
+        assert note.read_text(encoding="utf-8") == "# 用户自己的交付说明\n"

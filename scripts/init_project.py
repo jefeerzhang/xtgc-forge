@@ -20,6 +20,7 @@ from pathlib import Path
 # init_project.py 输出的文件名 + 不由本脚本生成但仍属"已存在项目"语义的文件,
 # 出现任一项 + 非 --force → 拒绝覆盖(防静默丢失用户已写内容)。
 TRACKED_FILES = (
+    "00_交付说明.md",
     "00_任务元信息.md",
     "Step1-input.md",
     "Step2a-points.md",
@@ -106,7 +107,7 @@ TEMPLATES = {
 
     "Step1-input.md": """# Step 1 · 输入确认
 
-> 由 ` `init_project.py` 自动生成。请填写或修改。
+> 由 `init_project.py` 自动生成。请填写或修改。
 
 ## 模糊领域
 

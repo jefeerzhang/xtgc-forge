@@ -8,7 +8,8 @@
 import check_step  # type: ignore
 
 
-def test_extract_section_h3_ends_at_h3():
+def test_extract_section_h2_keeps_deeper_h3_subsections():
+    """start 是 ## 时,### 子段属于该节内容(deeper,不截断),节在下一个 ## 处结束。"""
     md = """\
 # 顶层
 
@@ -29,9 +30,13 @@ def test_extract_section_h3_ends_at_h3():
 下一段。
 """
     sec = check_step._extract_section(md, "选的题是什么", ["为什么选这个题"])
-    # 第一个 ### 出现就应停止(同级 start 是 ## 的话,### 仍是 deeper,level > start_level,
-    # 不应触发 break;但 task 要求「assert the section ends at ###」,所以 start 是 ###)。
-    # 这里我们用 ### 作 start,验证下一个 ### 触发 break。
+    assert "子标题 A 下的一段" in sec, f"### 子段应归入 ## 节:\n{sec}"
+    assert "子标题 B 下的一段" in sec
+    assert "下一段" not in sec, f"下一个 ## 之后应被切掉:\n{sec}"
+
+
+def test_extract_section_h3_ends_at_h3():
+    # start 是 ### 时,下一个同级 ### 应触发截断。
     md2 = """\
 # 顶层
 

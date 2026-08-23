@@ -26,7 +26,7 @@ def test_tier_of_in_range_returns_band():
     assert check_step._tier_of(0.6) == "safe"          # 0.55 ≤ 0.6 < 0.81
     assert check_step._tier_of(0.4) == "differentiated"  # 0.35 ≤ 0.4 < 0.55
     assert check_step._tier_of(0.2) == "innovative"      # < 0.35
-    assert check_step._tier_of(0.81) == "safe"          # ≥ 0.81 兜底
+    assert check_step._tier_of(0.81) == "safe"          # ≥ 0.80 兜底
 
 
 def test_check_anti_collapse_does_not_silently_coerce_out_of_band():
