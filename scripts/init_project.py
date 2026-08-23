@@ -18,6 +18,28 @@ from pathlib import Path
 
 
 # 模板文件名
+# init_project.py 输出的文件名 + 不由本脚本生成但仍属"已存在项目"语义的文件,
+# 出现任一项 + 非 --force → 拒绝覆盖(防静默丢失用户已写内容)。
+TRACKED_FILES = (
+    "00_任务元信息.md",
+    "Step1-input.md",
+    "Step2a-points.md",
+    "Step2b-literature-matrix.md",
+    "Step2c-gap-verdicts.md",
+    "Step3a-candidate-themes.md",
+    "Step3b-selected-theme.md",
+    "Step4-hypotheses.md",
+    "Step5-identification-strategy.md",
+    "Step6-summary.md",
+    "00_研究计划报告.md",
+    "00_复跑决策记录.md",
+    "interaction-log.md",
+    "topic_scores.json",
+    "review_topics.md",
+    "review_scan.md",
+)
+
+
 TEMPLATES = {
     "00_交付说明.md": """# 交付说明(请先读)
 
@@ -429,20 +451,32 @@ X → M1, M2 → Y
 }
 
 
-def init_project(workdir: str, name: str, branch: str, language: str):
-    """初始化研究项目目录。"""
+def init_project(workdir: str, name: str, branch: str, language: str, force: bool = False):
+    """初始化研究项目目录。
+
+    当 --workdir 已含任一 TRACKED_FILES 中声明的文件时:
+    - 未传 --force → 退出码 1,提示需 --force 或换 --workdir;
+    - 传了 --force → 在 stderr 列出将被覆盖的文件,继续写入。
+    """
     workdir_path = Path(workdir).expanduser().resolve()
 
     if workdir_path.exists():
-        # 检查是否已有协议
-        protocol_file = workdir_path / "00_任务元信息.md"
-        if protocol_file.exists():
-            print(f"❌ 目录已存在协议:{workdir_path}")
-            print(f"  已有 00_任务元信息.md,拒绝覆盖")
-            print()
-            print("如需重新初始化:")
-            print(f"  rm -rf {workdir_path}  # 谨慎操作")
-            sys.exit(1)
+        # 检查是否已有任意已跟踪文件(v0.3.x 起扩到 TRACKED_FILES 全集,
+        # 不只 00_任务元信息.md,防静默覆盖用户已写内容)。
+        existing = [f for f in TRACKED_FILES if (workdir_path / f).exists()]
+        if existing:
+            if not force:
+                print(f"❌ 工作目录已存在项目文件:{workdir_path}", file=sys.stderr)
+                print(f"  命中 {len(existing)} 个已跟踪文件:{', '.join(existing[:5])}"
+                      + ("…" if len(existing) > 5 else ""),
+                      file=sys.stderr)
+                print(file=sys.stderr)
+                print("工作目录已存在项目文件 — 需 --force 覆盖,或换 --workdir", file=sys.stderr)
+                sys.exit(1)
+            print(f"⚠️  --force 已启用,以下 {len(existing)} 个文件将被覆盖:",
+                  file=sys.stderr)
+            for f in existing:
+                print(f"  - {f}", file=sys.stderr)
 
     # 创建目录
     workdir_path.mkdir(parents=True, exist_ok=True)
@@ -480,9 +514,11 @@ def main():
     parser.add_argument("--name", "-n", default="未命名研究主题", help="研究主题名称")
     parser.add_argument("--branch", "-b", default="推断性", help="学科分支:推断性 / 描述性 / 质性 / 混合")
     parser.add_argument("--language", "-l", default="zh-CN", help="语言:zh-CN / en-US")
+    parser.add_argument("--force", action="store_true",
+                        help="允许覆盖已存在的项目文件(默认拒绝,以防静默丢失)")
     args = parser.parse_args()
 
-    init_project(args.workdir, args.name, args.branch, args.language)
+    init_project(args.workdir, args.name, args.branch, args.language, args.force)
 
 
 if __name__ == "__main__":

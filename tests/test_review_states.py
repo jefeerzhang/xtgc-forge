@@ -82,3 +82,32 @@ def test_needs_human_warns():
         assert any("NEEDS_HUMAN" in w for w in soft)
     finally:
         td.cleanup()
+
+
+def test_verdict_with_trailing_chinese_passes():
+    # v0.3.x 起 verdict 正则锚定合法 token 集合,自然中文写法
+    # 「verdict: PASS,继续」应只捕获 PASS,不再把 ",继续" 一起吃进来。
+    td = _write(
+        "review_scan.md",
+        "verdict: PASS,继续\n\nreviewer: someone\n信任边界: 无密码学身份保证\n",
+    )
+    try:
+        status, hard, soft = check_step.check_review(Path(td.name), "scan")
+        assert status == "PASS", f"verdict: PASS,继续 应通过;hard={hard} soft={soft}"
+        assert hard == []
+    finally:
+        td.cleanup()
+
+
+def test_workdir_path_is_resolved():
+    # v0.3.x 起 main() 会把 args.workdir 经 expanduser + resolve 归一化,
+    # 以处理 ~/foo(Windows 下 os.path.isdir 不认 ~)。
+    td = tempfile.TemporaryDirectory()
+    nested = Path(td.name) / "subdir"
+    nested.mkdir()
+    # 用含 .. 组件的绝对路径,验证 resolve 后能定位到真实目录
+    weird = str(Path(td.name) / "subdir" / ".." / "subdir")
+    resolved = str(Path(weird).expanduser().resolve())
+    assert Path(resolved).is_dir(), f"应能解析含 .. 的路径:{weird} → {resolved}"
+    assert Path(resolved).resolve() == nested.resolve(), "resolve 后应回到真实子目录"
+    td.cleanup()

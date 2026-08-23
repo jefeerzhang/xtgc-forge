@@ -31,10 +31,11 @@ def test_golden_step_all_exactly_2_failures():
     out = r.stdout + r.stderr
     # 失败条目形如 "  - [step 2a] ..."(两个空格 + 连字符),不能用 strip() 后再比前缀
     fail = [ln for ln in out.splitlines() if ln.startswith("  - ")]
-    assert len(fail) == 2, f"预期恰好 2 个失败条目,实际 {len(fail)}\n{out}"
+    # 截至本次金样例:仅 Step2a 产物文件有意缺省(Step5 已补齐),
+    # 故 --step all 仅 1 项失败。后续若 Step5 产物变缺省,把 1 改回 2 并补 [step 5] 断言。
+    assert len(fail) == 1, f"预期恰好 1 项失败条目(Step2a),实际 {len(fail)}\n{out}"
     joined = "\n".join(fail)
     assert "[step 2a]" in joined, joined
-    assert "[step 5]" in joined, joined
     assert "review_" not in joined, f"review 不应出现在失败条目\n{joined}"
 
 

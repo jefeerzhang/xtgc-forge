@@ -691,6 +691,8 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
 #   status=FAIL   有硬错(verdict 字段缺失、值非法)
 # 调用方应只把 status=FAIL 视为阻塞;WARN 仅打印提示,不阻塞 --step all
 REVIEW_VALID_VERDICTS = {"PASS", "P0_OPEN", "FAIL", "NEEDS_HUMAN"}
+# 由 REVIEW_VALID_VERDICTS 派生,保证 verdict 正则与合法集合单一真源
+_VERDICT_ALT = "|".join(sorted(REVIEW_VALID_VERDICTS))
 
 
 def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]:
@@ -715,9 +717,10 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     content = review_file.read_text(encoding="utf-8")
 
     # ----- 硬错:verdict 字段本身有问题 -----
-    # 先用宽正则抓"verdict: <任何非空白串>"行,再判断值是否合法
+    # 锚定到合法 token 集合(_VERDICT_ALT 由 REVIEW_VALID_VERDICTS 派生),避免把
+    # "verdict: PASS,继续" 这种自然中文写法里的 "PASS,继续" 整体捕获下来再判非法。
     verdict_row = re.search(
-        r"verdict\s*:\s*\**\s*\`?\s*([^\s\*\`]+)\s*\`?",
+        r"verdict\s*:\s*\**\s*\`?(?P<v>" + _VERDICT_ALT + r")\b",
         content,
         re.IGNORECASE,
     )
@@ -727,7 +730,7 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
         )
         return ("FAIL", hard_errors, soft_warnings)
 
-    verdict = verdict_row.group(1).upper()
+    verdict = verdict_row.group("v").upper()
     if verdict not in REVIEW_VALID_VERDICTS:
         hard_errors.append(
             f"verdict 值 {verdict!r} 不在合法集合 {{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}} 内(v0.3.18 起需要写明 verdict 类型)"
@@ -920,6 +923,9 @@ def main():
     parser.add_argument("--workdir", "-w", required=True, help="工作目录(产出文件所在)")
     parser.add_argument("--step", "-s", required=True, help=f"Step 编号:{', '.join(VALID_STEPS)}")
     args = parser.parse_args()
+
+    # 展开 ~ 与 . / ..(Windows 下 os.path.isdir 不识别 ~,原实现会把 ~/foo 判为不存在)
+    args.workdir = str(Path(args.workdir).expanduser().resolve())
 
     if not os.path.isdir(args.workdir):
         print(f"❌ 目录不存在:{args.workdir}")

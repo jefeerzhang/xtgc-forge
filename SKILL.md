@@ -237,8 +237,8 @@ Step 3 · 涌现主题       从 gap 出 3 主推 + 2 备选 → 用户选 1
 Step 4 · 提炼假设       DAG + 反事实 + 效应量 → 用户确认
        ↓ 🛑 Checkpoint #4(假设确认 + Grill 追问) → check_step.py --step 4
 Step 5 · 因果识别       自动检测研究类型,推断性研究才启用
-       ↓ 🛑 Checkpoint #5(最终交付审阅) → check_step.py --step 6
 Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为附录)
+       ↓ 🛑 Checkpoint #5(最终交付审阅) → check_step.py --step 6
 ```
 
 ## 🎯 Step 3a 输出格式:3 主推 + 2 备选 + topic_scores.json
@@ -278,7 +278,9 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 
 每个 candidate 的 `decision` 字段:`selected`(主推)/ `parked`(备选)/ `dropped`(淘汰)。`dropped` 必须填 `kill_rule`。
 
-**用户决策**:看 topic_scores.json 的 `total` 分数,选最高的;若主推数据 / 方法不可行,降级到备选(并说明原因)。
+**用户决策建议**:参考 topic_scores.json 的 total 分数,但用户必须**显式点名**(如"选候选 2"),**不得默认选最高**;若主推不可行,降级备选须用户确认并说明原因(参见 L455)。
+
+> 交叉引用:Checkpoint #3 (L455) 明确规定「禁止默认选 total 最高项」,本建议与该硬规则对齐。
 
 **生成方式**:由 `scripts/init_project.py` 创建空模板,skill 跑 Step 3a 时填入 6 维评分。
 
@@ -805,8 +807,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 - **v0.3.0**(2026-08-10):**精雕 — 从骨架+纪律升级到可视化+传播资产**。SKILL.md frontmatter 触发词 19 条 + 顶部 mermaid 流程图;README 首屏 6 个徽章 + ASCII 流程图 + 5 闸硬暂停表格 + 触发词云;新增 `CHANGELOG.md` / `assets/diagram/` / `assets/comparison.md`。**逻辑骨架未动**(v0.2.9 的 5 闸硬暂停保留)。
 - **v0.2.9**(2026-08-10):**强制 5 次 Checkpoint 硬暂停**。#1–#5 全部硬暂停;禁止代选/合并跳过/用 check_step 代替用户确认;修正 Step3/4 闸门编号。
 - **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
-- **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。
-- **v0.2.7**(2026-08-10):**安装链路修复 + 命令语法 + 版本统一**(鲁班方案 A)。check-ready.sh 去私有路径;slash 入口改为合法语法;依赖安装引导入 README。
+- **v0.2.7**(2026-08-10):**独立审查分离 / 安装链路修复**(借鉴 RTS v1.5.2 + 鲁班方案 A)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证);check-ready.sh 去私有路径;slash 入口改为合法语法;依赖安装引导入 README。
 - **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。6 维评分 + decision 字段。
 - **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
 - **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
@@ -815,14 +816,3 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 - **v0.2.1**(2026-08-10):**UX 修复**。
 - **v0.2.0**(2026-08-10):**应用 8 个边界拷问决策**。砍 Step 6,拆为模块化命令,加 gap 派生规则。
 - **v0.1.0**(2026-08-10):初稿。7 步流水线骨架。
-- **v0.2.0**(2026-08-10):应用 8 个边界拷问决策。
-- **v0.2.1**(2026-08-10):**UX 修复**。
-- **v0.2.2**(2026-08-10):**实测驱动修复**。
-- **v0.2.3**(2026-08-10):**用户交互增强**。
-- **v0.2.4**(2026-08-10):**Checkpoint + Grill 双增**。
-- **v0.2.5**(2026-08-10):**3+2 课题选项 + 刚性闸门**。
-- **v0.2.6**(2026-08-10):**topic_scores.json + init_project.py**。
-- **v0.2.7**(2026-08-10):**独立审查分离 + 安装链路修复**。review.py 独立审查模板;check-ready.sh 去私有路径;命令入口改为合法 slash 语法;依赖安装引导入 README。
-- **v0.2.8**(2026-08-10):**P1 复现性**。example 补 inputs/ 输入端;修正 Step1 与气候案例不一致;加 test-prompts.json 3 条固化测试。
-- **v0.2.9**(2026-08-10):**强制 5 次 Checkpoint**。#1–#5 全部硬暂停;禁止代选/合并跳过/用 check_step 代替用户确认;修正 Step3/4 闸门编号。
-- **v0.2.7**(2026-08-10):**独立审查分离**(借鉴 RTS v1.5.2)。新增 `scripts/review.py` 生成 review_{scan|topics}.md 模板;check_step.py 加 scan-review / topics-review 校验;诚实声明信任边界(verdict 不提供密码学身份保证)。
