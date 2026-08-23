@@ -12,6 +12,7 @@ Thumbs.db
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
 # 临时输出
 outputs/

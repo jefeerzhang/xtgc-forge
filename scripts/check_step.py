@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-选题工坊 · 刚性闸门检查脚本 (v0.3.4)
+选题工坊 · 刚性闸门检查脚本 (版本号动态读取自 SKILL.md)
 
 校验每个 Step 产物的完整性、关键字段、最小内容长度。
 Step 6 额外校验主报告质量:附录结构、矩阵表行、段落深度、禁模板占位符。
@@ -22,6 +22,20 @@ import os
 import re
 import sys
 from pathlib import Path
+
+
+def _self_version() -> str:
+    """从仓库根 SKILL.md frontmatter 读取版本号(唯一真源),避免硬编码滞后。
+
+    与 check-ready.sh 的 SELF_VERSION 同源,防止脚本 banner 与仓库版本漂移。
+    """
+    skill = Path(__file__).resolve().parent.parent / "SKILL.md"
+    try:
+        text = skill.read_text(encoding="utf-8")
+    except Exception:
+        return "unknown"
+    m = re.search(r'^version:\s*["\']?([^"\'\s]+)["\']?\s*$', text, re.MULTILINE)
+    return m.group(1) if m else "unknown"
 
 
 # 每个 Step 的闸门校验规则
@@ -135,7 +149,7 @@ PLACEHOLDER_PATTERNS = [
     r"<[一-鿿]{4,}[^>]*>",
     # 关键词白名单:即使 < 4 字或含空格/Gap 等混合占位符也强制拦。
     # 覆盖 init 模板家族(<来源 Gap 编号> / <Gap 编号> / <研究类型 标签> / <填这里> 等)。
-    r"<[^>]*?(?:候选主题|候选标题|用户文献目录|来源\s*Gap|具体哪几篇|这个题揭示了|推断性研究才填|证据来源|研究类型\s*标签|Gap\s*编号|填哪几篇|填这里|填什么|填进去|标题雷同|题揭示)[^>]*?>",
+    r"<[^>]*?(?:候选主题|候选标题|用户文献目录|来源\s*Gap|具体哪几篇|这个题揭示了|推断性研究才填|证据来源|研究类型\s*标签|Gap\s*编号|填哪几篇|填这里|填什么|填进去|标题雷同|题揭示|待填|请填写)[^>]*?>",
     r"\bTODO\b",
     r"\bTBD\b",
     r"（待填）",
@@ -670,7 +684,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
     return (len(errors) == 0, errors)
 
 
-# v0.3.17 审查降级:从"刚性闸门"降为"过程建议"
+# v0.3.18 审查降级:从"刚性闸门"降为"过程建议"
 # 返回 (status, hard_errors, soft_warnings)
 #   status=PASS   无硬错,verdict 字段有效
 #   status=WARN   无硬错,但有软警告(如文件缺失、verdict=FAIL、P0 缺具体项)
@@ -682,7 +696,7 @@ REVIEW_VALID_VERDICTS = {"PASS", "P0_OPEN", "FAIL", "NEEDS_HUMAN"}
 def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]:
     """校验 review_{target}.md 状态。
 
-    v0.3.17 起降级为"过程建议":
+    v0.3.18 起降级为"过程建议":
     - 文件缺失 / 信任边界声明缺失 / reviewer ID 未替换 都不再视为硬错,只 WARN
     - verdict 缺失或值不在 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN} 才视为硬错(FAIL)
     - verdict=FAIL 或 verdict=P0_OPEN 缺具体 P0 列表也只 WARN(用户已说"不行",无需机器拦)
@@ -716,7 +730,7 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     verdict = verdict_row.group(1).upper()
     if verdict not in REVIEW_VALID_VERDICTS:
         hard_errors.append(
-            f"verdict 值 {verdict!r} 不在合法集合 {{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}} 内(v0.3.17 起需要写明 verdict 类型)"
+            f"verdict 值 {verdict!r} 不在合法集合 {{PASS, P0_OPEN, FAIL, NEEDS_HUMAN}} 内(v0.3.18 起需要写明 verdict 类型)"
         )
         return ("FAIL", hard_errors, soft_warnings)
 
@@ -744,7 +758,7 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
 
     if "密码学身份保证" not in content and "信任边界" not in content:
         soft_warnings.append(
-            f"review_{target}.md 缺信任边界声明(v0.3.17 推荐保留,即使不做密码学保证)"
+            f"review_{target}.md 缺信任边界声明(v0.3.18 推荐保留,即使不做密码学保证)"
         )
 
     # verdict=PASS 但 reviewer 仍是模板占位符 <hash> —— 这本是合规问题,降级为软警告
@@ -784,7 +798,7 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
             rr_passed, rr_errors = check_rerun_record(workdir_path, main_report)
             if not rr_passed:
                 all_errors.extend([f"[复跑授权] {e}" for e in rr_errors])
-        # v0.3.17 审查降级:review 缺失/警告不再阻塞 --step all,仅做过程留痕
+        # v0.3.18 审查降级:review 缺失/警告不再阻塞 --step all,仅做过程留痕
         for rt in ["scan", "topics"]:
             r_status, r_hard, r_soft = check_review(workdir_path, rt)
             if r_status == "FAIL":
@@ -802,7 +816,7 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
         return (ts_passed and ac_passed, combined)
 
     if step == "scan-review":
-        # v0.3.17 审查降级:3-tuple,只在 FAIL 时 sys.exit(1);WARN 仍返回 True
+        # v0.3.18 审查降级:3-tuple,只在 FAIL 时 sys.exit(1);WARN 仍返回 True
         status, hard, soft = check_review(workdir_path, "scan")
         if soft:
             for w in soft:
@@ -901,7 +915,8 @@ def check_step(workdir: str, step: str) -> tuple[bool, list[str]]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="选题工坊 · 刚性闸门检查 v0.3.4")
+    VERSION = _self_version()
+    parser = argparse.ArgumentParser(description=f"选题工坊 · 刚性闸门检查 v{VERSION}")
     parser.add_argument("--workdir", "-w", required=True, help="工作目录(产出文件所在)")
     parser.add_argument("--step", "-s", required=True, help=f"Step 编号:{', '.join(VALID_STEPS)}")
     args = parser.parse_args()

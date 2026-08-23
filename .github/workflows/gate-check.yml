@@ -1,0 +1,71 @@
+name: gate-check
+
+# 选题工坊 · 闸门自动对账(v0.3.17 · 事后补强)
+# 每次 push / PR 自动复验金样例,把 check_step 闸门从「人肉手动跑」变成「机器自动跑」。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖(pytest)
+        run: python -m pip install pytest
+
+      - name: 金样例主报告闸(必须 PASS)
+        run: python scripts/check_step.py --workdir "examples/漂绿治理-绿贷与环境税组合" --step 6
+
+      - name: 金样例过程文件复验(process/ 子目录回退)
+        run: |
+          for s in 1 2b 2c 3a 3b 4 scores; do
+            python scripts/check_step.py --workdir "examples/漂绿治理-绿贷与环境税组合" --step "$s"
+          done
+
+      - name: 金样例 --step all(预期 FAIL:恰好 2 项,仅 Step2a/5,review 不应列为失败)
+        run: |
+          out="$(python scripts/check_step.py --workdir "examples/漂绿治理-绿贷与环境税组合" --step all 2>&1 || true)"
+          echo "$out"
+          echo "----------------------------------------"
+          python - "$out" <<'PY'
+import sys, re
+out = sys.argv[1]
+fail = [ln for ln in out.splitlines() if re.match(r'^\s{2}- ', ln)]
+assert len(fail) == 2, f"预期恰好 2 个失败条目,实际 {len(fail)}:\n{out}"
+joined = "\n".join(fail)
+assert "[step 2a]" in joined and "[step 5]" in joined, joined
+assert not re.search(r'review_(scan|topics)', joined), f"review 不应出现在失败条目:\n{joined}"
+print("✅ --step all 失败数=2(仅 Step2a/5,review 已降级为过程建议)")
+PY
+
+      - name: 版本对账(单源一致:SKILL/README/CHANGELOG/发布通道)
+        run: python -m pytest tests/test_version_reconciliation.py -q
+
+      - name: 占位符 / review 三态单元测试
+        run: python -m pytest tests/test_placeholders.py tests/test_review_states.py -q
+
+      - name: 金样例集成断言(--step 6 PASS + --step all == 2)
+        run: python -m pytest tests/test_golden_step_all.py -q
+
+      - name: 模板占位符冒烟(未填充模板必须被拦)
+        run: |
+          tmp=$(mktemp -d)
+          python scripts/init_project.py --workdir "$tmp" --name "冒烟测试" --branch "推断性" >/dev/null 2>&1 || true
+          python - "$tmp" <<'EOF'
+import sys, pathlib
+sys.path.insert(0, "scripts")
+import check_step
+root = sys.argv[1]
+c = pathlib.Path(root).joinpath("Step2c-gap-verdicts.md").read_text(encoding="utf-8")
+errs = check_step.check_placeholders(c, "smoke")
+assert errs, "未填充模板应当命中占位符闸门"
+print("✅ 未填充模板被占位符闸门拦截")
+EOF

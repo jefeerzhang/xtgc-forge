@@ -1,5 +1,5 @@
 #!/bin/bash
-# 选题工坊 · 完整实测就绪检查脚本 (v0.3.17 · vendor-first + 版本对账)
+# 选题工坊 · 完整实测就绪检查脚本 (v0.3.18 · vendor-first + 版本对账)
 # 用法:
 #   bash check-ready.sh [PDF目录]        # 检查全部
 #   PDF目录缺省时只检查环境与依赖,不检查文献
@@ -11,22 +11,56 @@ SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 VENDOR_DIR="$SCRIPT_DIR/vendor"
 
 # 从 SKILL.md 动态读取版本,避免横幅与仓库版本漂移(曾硬编码 v0.2.9 滞后)
-SELF_VERSION="$(grep "^version:" "$SCRIPT_DIR/SKILL.md" 2>/dev/null | head -1 | tr -d '"' | awk '{print $2}')"
-[ -n "$SELF_VERSION" ] || SELF_VERSION="unknown"
-
-# 从 vendor 子目录的 SKILL.md frontmatter 读取版本(若存在)
-# Nero1688 4 个子 skill 的 SKILL.md 不带 version:,学术润色器 academic-humanizer 带 version: 0.3.3
 _read_version() {
     local f="$1"
     [ -f "$f" ] || return 1
     local v
-    v="$(grep -E '^version:\s*' "$f" 2>/dev/null | head -1 | sed -E 's/^version:\s*["]?([^"]+)["]?.*/\1/' | tr -d '[:space:]')"
+    v="$(grep -E '^version:\s*' "$f" 2>/dev/null | head -1 | awk '{print $2}' | tr -d '"' | tr -d "'" | tr -d '\r')"
     if [ -n "$v" ]; then
         echo "$v"
         return 0
     fi
     return 1
 }
+
+# 从 .claude-plugin/marketplace.json 解析发布通道版本(metadata.version + plugins[*].version)
+# 纯 bash 解析 JSON 易碎,交给 python3(脚本 [4/6] 已依赖之);缺失/非法时返回空,由调用方按缺失处理。
+_marketplace_versions() {
+    command -v python3 >/dev/null 2>&1 || return 1
+    local out
+    if out="$(python3 - "$1" 2>/dev/null <<'PY'
+import json, sys
+
+def main():
+    if len(sys.argv) < 2:
+        print()
+        return
+    try:
+        with open(sys.argv[1], encoding="utf-8") as fh:
+            d = json.load(fh)
+    except Exception:
+        print()
+        return
+    vs = []
+    meta = d.get("metadata") if isinstance(d, dict) else None
+    if isinstance(meta, dict) and meta.get("version"):
+        vs.append(str(meta["version"]))
+    plugins = d.get("plugins", []) if isinstance(d, dict) else []
+    for p in plugins:
+        if isinstance(p, dict) and p.get("version"):
+            vs.append(str(p["version"]))
+    print("\n".join(vs))
+
+if __name__ == "__main__":
+    main()
+PY
+    )"; then
+        printf '%s\n' "$out" | tr -d '\r'
+    fi
+}
+
+SELF_VERSION="$(_read_version "$SCRIPT_DIR/SKILL.md" || echo unknown)"
+[ -n "$SELF_VERSION" ] || SELF_VERSION="unknown"
 
 echo "================================================"
 echo "  选题工坊 ${SELF_VERSION} · 完整实测就绪检查"
@@ -145,9 +179,9 @@ else
     echo "  ⚠️  vendor/LICENSE 缺失"
 fi
 
-# 跨文件版本对账:SKILL.md / README.md / CHANGELOG.md 顶部
+# 跨文件版本对账:SKILL.md / README.md / CHANGELOG.md / 发布通道 marketplace.json
 echo ""
-echo "  🔎 跨文件版本对账(防 SKILL.md/README/CHANGELOG 头部漂移)..."
+echo "  🔎 跨文件版本对账(防 SKILL.md/README/CHANGELOG/发布通道头部漂移)..."
 
 README_VER=$(grep -oE "Version-v0\.[0-9]+\.[0-9]+" "$SCRIPT_DIR/README.md" 2>/dev/null | head -1 | sed -E 's/Version-v//')
 CHANGELOG_VER=$(grep -oE "v0\.[0-9]+\.[0-9]+" "$SCRIPT_DIR/CHANGELOG.md" 2>/dev/null | head -1 | sed -E 's/v//')
@@ -172,6 +206,34 @@ if [ -z "$README_VER" ]; then
 fi
 if [ -z "$CHANGELOG_VER" ]; then
     echo "     ⚠️  CHANGELOG.md 顶部未找到 v0.x.x 版本号"
+fi
+
+# 发布通道版本对账(metadata.version + plugins[*].version)
+MARKETPLACE_FILE="$SCRIPT_DIR/.claude-plugin/marketplace.json"
+if [ -f "$MARKETPLACE_FILE" ]; then
+    MP_VERSIONS="$(_marketplace_versions "$MARKETPLACE_FILE" 2>/dev/null || true)"
+    if [ -z "$MP_VERSIONS" ]; then
+        echo "     ⚠️  marketplace.json 存在,但未能解析 version(metadata.version / plugins[*].version)"
+        INCONSISTENT=1
+    else
+        for mp_v in $MP_VERSIONS; do
+            if [ "$mp_v" != "$SELF_VERSION" ]; then
+                echo "     ⚠️  marketplace.json version $mp_v ≠ SKILL.md $SELF_VERSION(发布通道元数据漂移)"
+                INCONSISTENT=1
+            else
+                echo "     ✅ marketplace.json v$mp_v = SKILL.md $SELF_VERSION"
+            fi
+        done
+    fi
+else
+    echo "     ⚠️  .claude-plugin/marketplace.json 不存在(发布通道缺失)"
+fi
+
+# CHANGELOG 同名版本重复检测(同一版本号多个 ## 段 → 版本批次冲突)
+DUPLICATE_CHANGES=$(grep -oE '^## v[0-9]+\.[0-9]+\.[0-9]+' "$SCRIPT_DIR/CHANGELOG.md" 2>/dev/null | sort | uniq -d | tr '\n' ' ')
+if [ -n "$DUPLICATE_CHANGES" ]; then
+    echo "     ⚠️  CHANGELOG 存在重复版本标题:$DUPLICATE_CHANGES(同一版本号有多个 ## 段,版本批次冲突,需合并或改版本号)"
+    INCONSISTENT=1
 fi
 
 # 4. vendored 脚本的 Python 依赖检查(仅警告,不阻塞)

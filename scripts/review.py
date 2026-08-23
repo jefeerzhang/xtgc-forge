@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-选题工坊 · 独立审查脚本 (v0.3.17 · 审查降级为过程建议)
+选题工坊 · 独立审查脚本 (v0.3.18 · 审查降级为过程建议)
 
 借鉴 research-topic-selection v1.5.2 的审查分离机制:
-- scan / topics 两道闸建议独立审查(非强制,v0.3.17 起降级为过程建议)
+- scan / topics 两道闸建议独立审查(非强制,v0.3.18 起降级为过程建议)
 - reviewer_agent_id ≠ producer_agent_id(推荐)
 - 审查者上下文不含产出过程,只读落盘产物(推荐)
 
 本脚本生成 verdict 模板(空),由独立子 agent 填入审查结论。
 verdict 通过 check_step.py 的 --step <target>-review 验证。
-v0.3.17 起,verdict 值允许 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};
+v0.3.18 起,verdict 值允许 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};
 缺失文件 / 信任边界声明缺失 / reviewer ID 占位 等都不再视为硬错,只 WARN。
 
 用法:
@@ -118,13 +118,13 @@ VERDICT_TEMPLATES = {
 
 ---
 
-## 7. 信任边界声明(诚实声明 · v0.3.17 降级)
+## 7. 信任边界声明(诚实声明 · v0.3.18 降级)
 
-> **WARNING · v0.3.17 审查降级说明**:本审查由独立 subagent 填写 verdict,但**没有密码学身份保证**。verdict 仅作过程留痕,
+> **WARNING · v0.3.18 审查降级说明**:本审查由独立 subagent 填写 verdict,但**没有密码学身份保证**。verdict 仅作过程留痕,
 > 不可作为合规依据、不可作为学术可信度背书。完整闭合需要受控 runner 外部登记审查行为(host fingerprint + 时间戳 + hash 链),
 > 超出本 skill 范围(同 RTS v1.5.2 残留,详见 CHANGELOG v0.2.7 与 SKILL.md 独立审查段)。
 >
-> 自 v0.3.17 起,`scripts/check_step.py --step scan-review` / `--step topics-review` 把缺失文件 / 信任边界声明缺失 / reviewer ID 占位
+> 自 v0.3.18 起,`scripts/check_step.py --step scan-review` / `--step topics-review` 把缺失文件 / 信任边界声明缺失 / reviewer ID 占位
 > 等从"硬错"降级为"软警告",不阻塞交付;verdict 值允许 {{PASS, P0_OPEN, FAIL, **NEEDS_HUMAN**}},其中 NEEDS_HUMAN 表示审查者明确
 > 自承"拿不准,需人类专家复核"——比伪造一个 PASS 更诚实。
 """,
@@ -216,13 +216,13 @@ VERDICT_TEMPLATES = {
 
 ---
 
-## 7. 信任边界声明(诚实声明 · v0.3.17 降级)
+## 7. 信任边界声明(诚实声明 · v0.3.18 降级)
 
-> **WARNING · v0.3.17 审查降级说明**:本审查由独立 subagent 填写 verdict,但**没有密码学身份保证**。verdict 仅作过程留痕,
+> **WARNING · v0.3.18 审查降级说明**:本审查由独立 subagent 填写 verdict,但**没有密码学身份保证**。verdict 仅作过程留痕,
 > 不可作为合规依据、不可作为学术可信度背书。完整闭合需要受控 runner 外部登记审查行为(host fingerprint + 时间戳 + hash 链),
 > 超出本 skill 范围(同 RTS v1.5.2 残留,详见 CHANGELOG v0.2.7 与 SKILL.md 独立审查段)。
 >
-> 自 v0.3.17 起,`scripts/check_step.py --step scan-review` / `--step topics-review` 把缺失文件 / 信任边界声明缺失 / reviewer ID 占位
+> 自 v0.3.18 起,`scripts/check_step.py --step scan-review` / `--step topics-review` 把缺失文件 / 信任边界声明缺失 / reviewer ID 占位
 > 等从"硬错"降级为"软警告",不阻塞交付;verdict 值允许 {{PASS, P0_OPEN, FAIL, **NEEDS_HUMAN**}},其中 NEEDS_HUMAN 表示审查者明确
 > 自承"拿不准,需人类专家复核"——比伪造一个 PASS 更诚实。
 """,
@@ -261,7 +261,7 @@ def create_review_template(workdir: str, target: str) -> str:
     print("  1. 由独立子 agent 填入 verdict:")
     print("     - reviewer context 必须为空(不含产出过程)")
     print("     - reviewer_agent_id ≠ producer_agent_id")
-    print("     - v0.3.17+ verdict 允许值:PASS / P0_OPEN / FAIL / NEEDS_HUMAN")
+    print("     - v0.3.18+ verdict 允许值:PASS / P0_OPEN / FAIL / NEEDS_HUMAN")
     print(f"  2. 填完后跑:python scripts/check_step.py --workdir {workdir} --step {target}-review")
     print("  3. PASS / NEEDS_HUMAN → 继续下一阶段")
     print("     P0_OPEN → 修复后重审(≤3 轮)")

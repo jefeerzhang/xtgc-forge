@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.17"
+version: "0.3.18"
 license: MIT
 ---
 
-# 选题工坊 v0.3.17
+# 选题工坊 v0.3.18
 
 ## 📊 流水线一览(图)
 
@@ -347,7 +347,7 @@ python scripts/check_step.py --workdir <你的工作目录> --step all
 - `Step 4 后`(可选):生成 `review_topics.md`,同上
 - `--step all` 会把缺失的 `review_scan.md` / `review_topics.md` 报为 ⚠️ 警告(不阻塞交付),见下文"审查作为过程建议"
 
-### 独立审查机制(v0.2.7,自 v0.3.17 起降级为过程建议)
+### 独立审查机制(v0.2.7,自 v0.3.18 起降级为过程建议)
 
 借鉴 RTS v1.5.2 的独立审查分离做法:**"推荐由独立 subagent 填 verdict",但承认本 skill 没有密码学保证**,不当作不可绕过的刚性闸门。
 
@@ -361,7 +361,7 @@ check_step.py --step scan-review 校验 verdict 文件存在 + 含合法 verdict
 PASS / NEEDS_HUMAN → 进 Step 3 | P0_OPEN → 修后重审(≤3 轮) | FAIL → 用户决定是否重跑
 ```
 
-### 审查作为过程建议(降级说明,v0.3.17)
+### 审查作为过程建议(降级说明,v0.3.18)
 
 `scripts/check_step.py --step scan-review` / `--step topics-review` 现在只校验:
 
@@ -784,6 +784,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ## 版本
 
+- **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省)。`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。
 - **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 改动跑了一次双轴 `code-review` 审查(Standards + Spec 并行子代理),收口 4 处遗留 + 归档发布通道。①[A1 断链修复字面闭合]`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺才算闭合);②[A2 / Standards #1 防线口径对齐]`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,从 marketplace 安装的用户不会误为硬约束;③[C1 / Standards #4 占位符正则收紧]`check_step.py` 通用匹配 `r"<[\u4e00-\u9fff][^>]*>"`(1 字起步)→ 双层:`r"<[一-鿿]{4,}[^>]*>"`(4 汉字起步)+ 关键词白名单兜底 1-3 字 / 含空格/Gap 混合占位符,过滤掉合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 等;④[B1 发布通道归档]`marketplace.json` 字段全合规但 v0.3.16 CHANGELOG 漏归档,本次显式记入(本行 ⑤)。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review,均为金样例有意缺省),Step 6 主报告闸仍 PASS。
 - **v0.3.16**(2026-08-13):**金样例可复验性加固**。①占位符闸门补漏:新增通用模式 `<[\u4e00-\u9fff][^>]*>`,覆盖 init 模板 `<中文...>` 占位符家族(原枚举 3 个模式漏掉 20+ 个);②清除金样例 3 处 `<用户文献目录>` 占位残留(主报告附录 F / Step1-input / 旧样例 Step2a OCR 目录树);③`check_step.py` 新增 `_resolve_workdir_file()` helper,产物文件按「根目录 → process/ 子目录」回退解析,金样例 `process/` 下 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验,`--step all` 失败项 12 → 4(仅缺省 Step2a/5/review);④金样例 README 断链修复(`outputs/漂绿与金融市场风险/` 不存在 → 指向 `process/`),主 README `outputs/` 注明不入库。⑤新增 `.claude-plugin/marketplace.json`,声明 Claude Plugin Marketplace 发布通道元数据(name/source/description/version/keywords/homepage/license/skills)。
 - **v0.3.15**(2026-08-13):**内置 academic-humanizer(jefeerzhang fork,MIT)**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」;`vendor/academic-humanizer/` 镜像 jefeerzhang/academic-humanizer-zh(其中 C7 中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md` 为 jefeerzhang 在 AIScientists-Dev 上游之上增量添加);SKILL.md frontmatter `name` 沿用 `academic-humanizer`(无 `-zh` 后缀,匹配 v0.3.14 vendor 命名约定);LICENSE 放 `vendor/academic-humanizer/LICENSE`(MIT,Copyright 2026 AIScientists-Dev,fork 未重署版权);NOTICE.md 新增 academic-humanizer 段,声明上游 + 上游之上游(`blader/humanizer` MIT / `koaeraser/ARMS`)三方 attribution;check-ready.sh 头改为 `[1/6]…[6/6]`,新增第 6 段 vendor probe;无 transitive deps(无 Python / 无 pip);`references/deai-checklist.md` 降级为 humanizer 润色后自查兜底。
