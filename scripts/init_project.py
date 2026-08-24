@@ -16,6 +16,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _force_utf8_stdio() -> None:
+    """强制 stdout/stderr 走 UTF-8(管道重定向时 Windows 默认 cp936,
+    ✅/❌ 等 emoji 会抛 UnicodeEncodeError,导致成功初始化也以退出码 1 结束)。"""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 # 模板文件名
 # init_project.py 输出的文件名 + 不由本脚本生成但仍属"已存在项目"语义的文件,
 # 出现任一项 + 非 --force → 拒绝覆盖(防静默丢失用户已写内容)。
@@ -532,4 +540,5 @@ def main():
 
 
 if __name__ == "__main__":
+    _force_utf8_stdio()
     main()

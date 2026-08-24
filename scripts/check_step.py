@@ -38,6 +38,28 @@ MIN_PARAGRAPH_CHARS = 40
 MAX_BODY_SENTENCE = 100
 
 
+def _force_utf8_stdio() -> None:
+    """强制 stdout/stderr 走 UTF-8(管道重定向时 Windows 默认 cp936,
+    ✅/❌ 等 emoji 会抛 UnicodeEncodeError,导致 PASS 也以退出码 1 结束)。
+    输出消费方(Claude Code / 测试)统一按 UTF-8 解码。"""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
+def _read_text_utf8(path: Path) -> str:
+    """读产物文件;非 UTF-8(常见:编辑器存成 GBK/ANSI)时给可操作的提示。"""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        print(
+            f"❌ {path.name} 不是有效的 UTF-8 文本(可能被存成了 GBK/ANSI)。"
+            f"请将其转存为 UTF-8 后重试。({exc})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def _self_version() -> str:
     """从仓库根 SKILL.md frontmatter 读取版本号(唯一真源),避免硬编码滞后。
 
@@ -385,7 +407,7 @@ def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
             ],
         )
 
-    content = log_file.read_text(encoding="utf-8")
+    content = _read_text_utf8(log_file)
     confirmed: dict[str, list[str]] = {}
     for line in content.splitlines():
         line = line.strip()
@@ -436,7 +458,7 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     """
     errors = []
     rerun_file = _resolve_workdir_file(workdir, "00_复跑决策记录.md")
-    main_report = main_report_path.read_text(encoding="utf-8") if main_report_path.exists() else ""
+    main_report = _read_text_utf8(main_report_path) if main_report_path.exists() else ""
 
     # 只认声明位:复跑说明 / 本复跑 / 附录F 表行「| 复跑 |」;「需复跑核实」等提及不算
     declares_rerun = any(re.search(p, main_report) for p in RERUN_DECLARE_PATTERNS)
@@ -450,7 +472,7 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     if not rerun_file.exists():
         return (True, [])  # 未复跑,无需复跑记录
 
-    content = rerun_file.read_text(encoding="utf-8")
+    content = _read_text_utf8(rerun_file)
     has_quote = any(p in content for p in RERUN_PHRASES)
     has_time = bool(re.search(r"\d{4}-\d{2}-\d{2}|\d{4}/\d{1,2}/\d{1,2}", content))
     is_empty = len(content.strip()) < RERUN_EMPTY_THRESHOLD or PLACEHOLDER_PATTERNS_RE.search(content) is not None
@@ -564,7 +586,7 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
         return (False, ["topic_scores.json 不存在,请用 init_project.py 创建或手动生成"])
 
     try:
-        data = json.loads(score_file.read_text(encoding="utf-8"))
+        data = json.loads(_read_text_utf8(score_file))
     except json.JSONDecodeError as e:
         return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
 
@@ -661,7 +683,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
         return (False, ["topic_scores.json 不存在,无法做反坍缩校验"])
 
     try:
-        data = json.loads(score_file.read_text(encoding="utf-8"))
+        data = json.loads(_read_text_utf8(score_file))
     except json.JSONDecodeError as e:
         return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
 
@@ -747,7 +769,7 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
         )
         return ("WARN", hard_errors, soft_warnings)
 
-    content = review_file.read_text(encoding="utf-8")
+    content = _read_text_utf8(review_file)
 
     # ----- 硬错:verdict 字段本身有问题 -----
     # 两段式:先宽捕获 verdict 值(在空白/中英文句读/markdown 符号处截断,
@@ -962,7 +984,7 @@ def check_step(workdir: str, step: str, _from_all: bool = False) -> tuple[bool, 
     if not file_path.exists():
         return (False, [f"{rule['fail_msg']}\n  文件不存在:{file_path}(根目录与 process/ 均未找到)"])
 
-    content = file_path.read_text(encoding="utf-8")
+    content = _read_text_utf8(file_path)
     lines = content.splitlines()
 
     if len(lines) < rule["min_lines"]:
@@ -1023,4 +1045,5 @@ def main():
 
 
 if __name__ == "__main__":
+    _force_utf8_stdio()
     main()

@@ -26,6 +26,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _force_utf8_stdio() -> None:
+    """强制 stdout/stderr 走 UTF-8(管道重定向时 Windows 默认 cp936,
+    ✅/❌ 等 emoji 会抛 UnicodeEncodeError,导致成功生成也以退出码 1 结束)。"""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 # 审查产物模板
 VERDICT_TEMPLATES = {
     "scan": """# Scan Review Verdict
@@ -278,4 +286,5 @@ def main():
 
 
 if __name__ == "__main__":
+    _force_utf8_stdio()
     main()
