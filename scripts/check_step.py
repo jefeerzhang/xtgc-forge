@@ -34,7 +34,7 @@ RERUN_EMPTY_THRESHOLD = 30
 MIN_REVEALS_LEN = 8
 # 正文段落最小有效字符数(用于 _count_paragraphs 过滤纯标题/纯表格/纯占位的伪段)
 MIN_PARAGRAPH_CHARS = 40
-# 正文句子最大长度(以 。；为界),超过即 FAIL(断句规则)
+# 正文句子最大长度(以 。；？！为界),超过即 FAIL(断句规则)
 MAX_BODY_SENTENCE = 100
 
 
@@ -219,12 +219,18 @@ def _extract_section(content: str, heading_substr: str, next_headings: list[str]
         # 遇到其他六段标题或附录标题则停
         for nh in next_headings:
             if nh in line and heading_substr not in line:
-                end = j
-                return "\n".join(lines[start:end])
+                # 与下方通用边界一致:只有同级或更高级的标题才算分节边界,
+                # 深层同名小节(如上级章节内的 ### 同名小节)不得提前截断
+                level = len(line) - len(line.lstrip("#"))
+                start_line = lines[start - 1]
+                start_level = len(start_line) - len(start_line.lstrip("#"))
+                if level <= start_level:
+                    end = j
+                    return "\n".join(lines[start:end])
         # 任何级别的标题都视为潜在分节边界(从 # 到 ######),
         # 然后用 level <= start_level 判定是否真属于「同级或更高级」。
         # 这样 ## 下的 ### 不会被忽略,### 段也能正确切分。
-        if re.match(r"^#{1,6}\s+", line) and j > start:
+        if re.match(r"^#{1,6}\s+", line) and j >= start:
             level = len(line) - len(line.lstrip("#"))
             start_line = lines[start - 1]
             start_level = len(start_line) - len(start_line.lstrip("#"))
@@ -261,7 +267,7 @@ def _count_matrix_data_rows(content: str) -> int:
     """
     # 截取附录 A
     appendix = content
-    m = re.search(r"附录\s*A[^\n]*\n([\s\S]*?)(?=\n##\s*附录\s*B|\n#\s*附录\s*B|\Z)", content)
+    m = re.search(r"附录\s*A[^\n]*\n([\s\S]*?)(?=\n#{1,6}\s*附录\s*B|\Z)", content)
     if m:
         appendix = m.group(1)
 
@@ -574,7 +580,7 @@ def check_readability(content: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        for piece in re.split(r"[。；？]", line):
+        for piece in re.split(r"[。；？！]", line):
             if len(piece.strip()) > MAX_BODY_SENTENCE:
                 long_sentences.append(piece.strip())
 
@@ -624,7 +630,8 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
         for key in SCORE_KEYS:
             if key not in scores:
                 errors.append(f"{prefix}: 缺少评分 '{key}'")
-            elif not isinstance(scores[key], int):
+            elif isinstance(scores[key], bool) or not isinstance(scores[key], int):
+                # bool 是 int 子类,True/False 会通过范围检查,显式排除(与 t_score 口径一致)
                 errors.append(f"{prefix}: 评分 '{key}' 不是整数")
             elif not (1 <= scores[key] <= 5):
                 errors.append(f"{prefix}: 评分 '{key}'={scores[key]} 不在 1-5 范围")
@@ -649,7 +656,8 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
                 errors.append(
                     f"{prefix}: 'reveals' 过短({len(reveals)}字 < {MIN_REVEALS_LEN})。『揭示了什么』答不上 = 工程任务/重复验证,回炉"
                 )
-            elif reveals == c.get("title"):
+            elif reveals == (c.get("title") or "").strip():
+                # title 同样 strip:标题带尾随空格不应绕过抄题检测
                 errors.append(
                     f"{prefix}: 'reveals' 与标题完全相同——只是抄了题目,未回答『揭示了什么』,回炉"
                 )
@@ -725,7 +733,9 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
             # 已足够定位问题,不再追加「推导层级为…」的迷惑错。
             errors.append(
                 f"{prefix}: 't_score'={t_score} 推导层级为 '{derived}',"
-                f"与所填 '{tier}' 不一致(0.55≤safe<0.80 / 0.35≤differentiated<0.55 / <0.35 innovative)"
+                f"与所填 '{tier}' 不一致(分界:" + " / ".join(
+                    f"{t}:{lo}≤t<{hi}" for t, (lo, hi) in TIER_BANDS.items()
+                ) + ";t≥0.80 归入模态区,由模态识别拦截)"
             )
 
     selected = [c for c in candidates if c.get("decision") == "selected"]

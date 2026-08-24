@@ -106,12 +106,22 @@ def test_verdict_with_trailing_chinese_passes():
 def test_workdir_path_is_resolved():
     # v0.3.x 起 main() 会把 args.workdir 经 expanduser + resolve 归一化,
     # 以处理 ~/foo(Windows 下 os.path.isdir 不认 ~)。
+    # 真正调用被测入口:check_step(workdir, step) 对含 .. 组件的路径应能
+    # 定位到真实目录并正常校验(resolve 前后指向同一处)。
+    import check_step as cs
+
     td = tempfile.TemporaryDirectory()
-    nested = Path(td.name) / "subdir"
-    nested.mkdir()
-    # 用含 .. 组件的绝对路径,验证 resolve 后能定位到真实目录
-    weird = str(Path(td.name) / "subdir" / ".." / "subdir")
-    resolved = str(Path(weird).expanduser().resolve())
-    assert Path(resolved).is_dir(), f"应能解析含 .. 的路径:{weird} → {resolved}"
-    assert Path(resolved).resolve() == nested.resolve(), "resolve 后应回到真实子目录"
-    td.cleanup()
+    try:
+        nested = Path(td.name) / "subdir"
+        nested.mkdir()
+        weird = str(Path(td.name) / "subdir" / ".." / "subdir")
+        resolved = str(Path(weird).expanduser().resolve())
+        assert Path(resolved).is_dir()
+        assert Path(resolved).resolve() == nested.resolve()
+        # 被测行为:含 .. 的 workdir 与 resolve 后的 workdir 判定一致
+        ok_weird, err_weird = cs.check_step(weird, "bogus-step")
+        ok_resolved, err_resolved = cs.check_step(resolved, "bogus-step")
+        assert ok_weird == ok_resolved == False
+        assert "未知 step" in err_weird[0] and "未知 step" in err_resolved[0]
+    finally:
+        td.cleanup()

@@ -31,7 +31,7 @@ def test_golden_step6_passes():
     assert r.returncode == 0, r.stdout + r.stderr
 
 
-def test_golden_step_all_exactly_2_failures():
+def test_golden_step_all_exactly_1_failure():
     r = _run("all")
     out = r.stdout + r.stderr
     # 失败条目形如 "  - [step 2a] ..."(两个空格 + 连字符),不能用 strip() 后再比前缀

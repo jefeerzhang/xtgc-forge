@@ -79,7 +79,8 @@ def test_review_refuses_on_existing_template():
 
         r2 = _run(workdir, "--target", "scan")
         assert r2.returncode == 1, "已存在审查模板时应拒绝"
-        assert "已存在" in r2.stdout or "已存在" in r2.stderr
+        # v0.3.x 起错误统一走 stderr(与 init_project 契约一致)
+        assert "已存在" in r2.stderr
 
 
 def test_review_rejects_invalid_target():
