@@ -3,6 +3,20 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.20 · 2026-08-24 · 审计驱动稳健性收口(17 项缺陷 + 测试 38 → 64)
+
+**主线**:v0.3.19 收口的是「规范说一套,代码做另一套」,本次收口的是「测试全绿,真实环境仍不可靠」。两个并行只读审计 agent 深读三个脚本,产出 17 个全部经临时脚本验证的 bug 候选 + 一批覆盖缺口。最刺眼的事实:全套测试强制 `PYTHONIOENCODING=utf-8`,恰好把「Windows 管道默认 GBK 时 `print("✅")` 抛 UnicodeEncodeError、通过的报告也 exit 1」这条必踩路径完全遮蔽;`init_project.py --name/--branch/--language` 要替换的占位符在模板里根本不存在,是空操作,而 SKILL.md 还在教用户传;四个核心闸函数(`check_interaction_log` / `check_rerun_record` / `check_topic_scores` / `check_readability`)零直测,golden 只走 happy path。修复按四批落地,每批先写会红的测试再修,独立 commit。
+
+1. **批次 1 — 编码稳健性**:`check_step.py` / `init_project.py` / `review.py` 入口新增 `_force_utf8_stdio()`(GBK 管道下 emoji 崩溃导致 PASS 也 exit 1、init 在 14 个文件写盘后崩溃);`check_step.py` 新增 `_read_text_utf8()`,编辑器存成 GBK 的产物文件得到「转存 UTF-8」提示而非裸 traceback。新增 `tests/test_encoding_robustness.py`,刻意以 GBK stdio 子进程运行(5 用例)
+2. **批次 2 — 校验器误报(合规产物被误拦)**:`check_review` verdict 改取最后一次声明(正文转述历史轮次「verdict: FAIL」不再压过最终 PASS);interaction-log 原话过滤从「含 `<`/待填即整条丢弃」改为剥占位标记后无实义才跳过(「要求 t_score<0.5」保留);闸门匹配 `\b` → `(?!\d)`(汉字算 word char,「CP#1已确认」曾失配);附录豁免从字面串「# 整合附录」改为 markdown 标题行正则(带序号/无空格变体均豁免)。新增 `tests/test_false_positive_gates.py`(5 用例,含防豁免扩大化守卫)
+3. **批次 3 — init 参数生效 + 文档对齐**:`00_任务元信息.md` 头部新增参数化摘要、Step1 模糊领域预填 `--name`;拒绝覆盖提示去重;回显命令给 `--workdir` 路径加引号;review.py 错误统一走 stderr 并删除 argparse 已限死的不可达分支;SKILL.md 文件树对齐实际产物(init 生成 14 个模板,`00_复跑决策记录.md` 与 `review_*.md` 标注为过程产物)。新增 `tests/test_init_params.py`(5 用例)
+4. **批次 4 — 低危清扫 + 测试补强**:topic_scores 整数校验排除 bool;断句句界补全角 `!`;`_extract_section` off-by-one(`j > start` → `j >= start`)+ next_headings 层级感知(深层同名小节不再提前截断);reveals 抄题检测对 title 同步 strip;附录 A 截取边界泛化到任意标题层级;tier 不一致文案改由 `TIER_BANDS` 动态生成并注明模态区(消除 t_score=0.85 时「0.55≤safe<0.80」自相矛盾)。新增 `tests/test_gate_units.py`(rerun 三分支/topic_scores 变异/断句与切分边界直测,11 用例);空壳测试 `test_workdir_path_is_resolved` 改为真调 `check_step`;`test_golden_step_all_exactly_2_failures` 更名 `_1_failure`(名实对齐);弱断言收紧
+5. **不修项(明确 wonfix)**:`_strip_md_structure` 对 `\字母` 行的整行删除 —— 宽松方向、有专项测试锚定,改动收益低于回归风险
+6. **版本**:SKILL.md frontmatter / 标题、README 版本徽章与版本列表、marketplace.json、CHANGELOG 本条目五处同步至 0.3.20;`check-ready.sh` 自取 frontmatter 自动跟随
+7. **提交**:`ad2c8a8`(批次 1)→ `11cdd91`(批次 2)→ `8b4c3da`(批次 3)→ `54da2a4`(批次 4)→ 本条目;测试 38 → 64 passed
+
+---
+
 ## v0.3.19 · 2026-08-23 · 三轮 code review 收口 51 项(规范-脚本-样例闭环)
 
 **主线**:v0.3.18 的"诚实化运动"让规范对用户说真话,但仓库自己还有大量「规范说一套,代码做另一套」的不一致——spec 上写 Checkpoint #5 在 Step 6 之前,文本流程图却写在 Step 6 之后;verdict 正则会贪婪吃掉中文句读,`verdict: PASS,继续` 被静默判 FAIL;`init_project.py` 只要 `00_任务元信息.md` 不在就静默覆盖已写的 Step 1–5;SKILL.md 文件树列出两个 vendor 子 skill 但 Step 2a/Phase 0 正文从没调用它们。这些 latent 问题让「Skill 写一套对的事,Agent 跑出另一套对的事」同时成立,用户被骗不动但结果不可信。本次对仓库做三轮 code review(规范 / 脚本 / 样例,三个并行的 general-purpose agent),收口 51 项,效果是把 Skill spec、Python script、黄金样例三者之间的所有关键路径都用测试和样例内容实际覆盖,事后任何一处规范说「应如此」都在代码或样例里有对应证据。

@@ -9,7 +9,7 @@
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version: v0.3.19](https://img.shields.io/badge/Version-v0.3.19-blue)](CHANGELOG.md)
+[![Version: v0.3.20](https://img.shields.io/badge/Version-v0.3.20-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)
@@ -281,6 +281,7 @@ MIT（可商用、可改编）。
 
 ## 版本
 
+- **v0.3.20**(2026-08-24):**审计驱动稳健性收口 17 项 + 测试 38→64**。两个并行只读审计 agent 深读三个脚本,17 个 bug 候选全部经临时脚本验证后分四批落地(每批先红后绿、独立 commit):①编码稳健性 —— Windows 管道默认 GBK 时 `print("✅")` 崩溃致 PASS 也 exit 1、init 在 14 个文件写盘完成后崩溃,三脚本入口新增 `_force_utf8_stdio()`;非 UTF-8 产物文件给「转存」提示而非裸 traceback;②校验器误报四连 —— verdict 取最后一次声明(历史轮次转述不再压过最终结论)、interaction-log 原话含 `<` 不再整条丢弃、「CP#1已确认」紧贴汉字可匹配、附录标题带序号/无空格变体均豁免黑话检查;③`--name/--branch/--language` 从空操作变真正生效(占位符落进模板),SKILL.md 文件树对齐实际产物(14 个 init 模板 + 过程产物标注),错误统一走 stderr,回显命令路径加引号;④低危清扫(topic_scores bool 通过整数检查、全角 ！句界、`_extract_section` off-by-one 与层级感知、tier 不一致文案自相矛盾等)+ `check_rerun_record`/`check_topic_scores`/`check_readability` 零覆盖函数直测。
 - **v0.3.19**(2026-08-23):**三轮 code review 收口 51 项**(技能规范 / Python 脚本 / 黄金样例三项并行审计)。9 项阻塞(Checkpoint #5 流程图对齐、`verdict` 中文贪婪正则、`init_project.py` 静默覆盖、`--workdir ~` 解析、v0.2.X 变更日志去重、L281「用户决策」歧义、黄金样例 Step3b 2→9 类对抗压测、恢复 Step5 独立文件、vendor 子 skill 接线)+ 21 项重要(规范 9 项补 复跑/grill-me/T-Score/确认定义/对抗压测 opt-in 等;脚本 8 项补 is_dir / 锚定正则 / step-all 去重 / h3 提取 / 矩阵行检测 / 标签去重 / is_empty 正则 / tier 超界)+ 21 项轻微(规范 13 项+脚本 8 项);`scripts/check_step.py` 拆分为 4 个 per-step rule 函数 + 字典调度;`magic numbers` 提为模块常量;测试 17 → 33 passed。
 - **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省);`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。
 - **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 跑双轴 `code-review`,收口 4 处遗留 + 归档发布通道。①`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺闭合);②`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,防线口径与 SKILL.md 对齐;③占位符正则从 1 字起步(`<[一-鿿][^>]*>`)收紧为 4 字起步 + 关键词白名单兜底,过滤合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 误报;④`marketplace.json` 字段全合规但 v0.3.16 漏归档,本次显式记入。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review 有意缺省),Step 6 主报告闸仍 PASS。
