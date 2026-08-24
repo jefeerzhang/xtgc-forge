@@ -54,6 +54,9 @@ def test_review_suggests_command_with_resolved_workdir():
         end = rest.find(" --step ")
         assert end != -1, f"应含 --step 段以界定路径尾部:\n{rest}"
         after = rest[:end].strip()
+        # v0.3.x 起回显命令给路径加引号(含空格路径复制即可用),剥掉引号再校验
+        if after.startswith('"') and after.endswith('"'):
+            after = after[1:-1]
         # resolve 后应得到真实子目录的绝对路径,不含 .. 组件
         assert ".." not in after, (
             f"resolve 后回显路径不应再含 .. 组件:raw='{weird}' → printed='{after}'"

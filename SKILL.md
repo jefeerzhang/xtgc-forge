@@ -769,7 +769,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 │   ├── 漂绿治理-绿贷与环境税组合/         ★ v0.3.2+ 金样例(主报告完成态)
 │   └── 气候风险对企业绿色转型/            旧过程样例(见 LEGACY.md)
 ├── scripts/
-│   ├── init_project.py                   初始化工作目录(生成 Step1-input.md / Step2a-points.md / Step2b-literature-matrix.md / Step2c-gap-verdicts.md / Step3a-candidate-themes.md / Step3b-selected-theme.md / topic_scores.json / Step4-hypotheses.md / Step5-identification-strategy.md / 00_研究计划报告.md / 00_交付说明.md / 00_任务元信息.md / 00_复跑决策记录.md / interaction-log.md / review_scan.md / review_topics.md 等模板)
+│   ├── init_project.py                   初始化工作目录(生成 00_交付说明.md / 00_任务元信息.md / Step1-input.md / Step2a-points.md / Step2b-literature-matrix.md / Step2c-gap-verdicts.md / Step3a-candidate-themes.md / Step3b-selected-theme.md / Step4-hypotheses.md / Step5-identification-strategy.md / Step6-summary.md / 00_研究计划报告.md / interaction-log.md / topic_scores.json;00_复跑决策记录.md 与 review_*.md 为过程产物,由流水线后续阶段生成,但同属防覆盖哨兵 TRACKED_FILES)
 │   ├── check_step.py                     刚性闸门校验
 │   └── review.py                         独立审查模板生成
 └── check-ready.sh                        就绪检查(环境 + 依赖 + 文献目录)

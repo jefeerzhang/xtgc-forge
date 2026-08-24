@@ -68,7 +68,11 @@ TEMPLATES = {
 
     "00_任务元信息.md": """# 任务元信息(Phase 0 三问回答)
 
-> 由 `init_project.py` 自动生成。请填写或修改。
+> 由 `init_project.py` 自动生成(生成时间:<YYYY-MM-DD>)。请填写或修改。
+
+- **研究主题**:<研究主题>
+- **学科分支预设**:<推断性|描述性|质性>(可结合第 7 节重新评估)
+- **语言偏好**:<zh-CN|en-US>(对应第 8 节)
 
 ## 1. 学科背景与研究方向
 - 一级学科:
@@ -120,7 +124,7 @@ TEMPLATES = {
 ## 模糊领域
 
 ```
-<请填写:1-2 句话描述研究兴趣 / 现象 / 直觉>
+<研究主题>
 ```
 
 ## 文献清单
@@ -476,10 +480,8 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
             if not force:
                 print(f"❌ 工作目录已存在项目文件:{workdir_path}", file=sys.stderr)
                 print(f"  命中 {len(existing)} 个已跟踪文件:{', '.join(existing[:5])}"
-                      + ("…" if len(existing) > 5 else ""),
-                      file=sys.stderr)
-                print(file=sys.stderr)
-                print("工作目录已存在项目文件 — 需 --force 覆盖,或换 --workdir", file=sys.stderr)
+                      + ("…" if len(existing) > 5 else ""), file=sys.stderr)
+                print("需 --force 覆盖,或换 --workdir", file=sys.stderr)
                 sys.exit(1)
             print(f"⚠️  --force 已启用,以下 {len(existing)} 个文件将被覆盖:",
                   file=sys.stderr)
@@ -499,13 +501,11 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
     created = []
     for filename, content in TEMPLATES.items():
         file_path = workdir_path / filename
-        # 替换占位符
+        # 替换占位符(三个参数化 token 在模板中真实存在;日期 token 同理)
         content_filled = content.replace("<YYYY-MM-DD>", datetime.now().strftime("%Y-%m-%d"))
         content_filled = content_filled.replace("<研究主题>", name)
         content_filled = content_filled.replace("<推断性|描述性|质性>", branch)
         content_filled = content_filled.replace("<zh-CN|en-US>", language)
-        # 处理 language 在 frontmatter 中的格式
-        content_filled = content_filled.replace('"--language <zh-CN|en-US>"', f'--language {language}')
 
         file_path.write_text(content_filled, encoding="utf-8")
         created.append(str(file_path.relative_to(workdir_path)))
@@ -519,7 +519,7 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
     print("🔧 下一步:")
     print(f"  1. 编辑 00_任务元信息.md(三问回答)")
     print(f"  2. 编辑 Step1-input.md(文献清单)")
-    print(f"  3. 运行:python scripts/check_step.py --workdir {workdir_path} --step 1")
+    print(f"  3. 运行:python scripts/check_step.py --workdir \"{workdir_path}\" --step 1")
 
 
 def main():

@@ -242,18 +242,14 @@ def create_review_template(workdir: str, target: str) -> str:
 
     # --workdir 必须是已存在的目录(与 init_project.py 一致的「文件拒绝」契约)。
     if not workdir_path.exists() or not workdir_path.is_dir():
-        print(f"❌ 工作目录不存在或不是目录:{workdir_path}")
-        sys.exit(1)
-
-    if target not in VERDICT_TEMPLATES:
-        print(f"❌ 未知 target: {target}。合法:scan / topics")
+        print(f"❌ 工作目录不存在或不是目录:{workdir_path}", file=sys.stderr)
         sys.exit(1)
 
     review_file = workdir_path / f"review_{target}.md"
 
     if review_file.exists():
-        print(f"❌ 审查产物已存在:{review_file}")
-        print("  拒绝覆盖。如需重新审查:rm 该文件后再跑")
+        print(f"❌ 审查产物已存在:{review_file}", file=sys.stderr)
+        print("  拒绝覆盖。如需重新审查:rm 该文件后再跑", file=sys.stderr)
         sys.exit(1)
 
     content = VERDICT_TEMPLATES[target].format(
@@ -270,7 +266,7 @@ def create_review_template(workdir: str, target: str) -> str:
     print("     - reviewer context 必须为空(不含产出过程)")
     print("     - reviewer_agent_id ≠ producer_agent_id")
     print("     - v0.3.18+ verdict 允许值:PASS / P0_OPEN / FAIL / NEEDS_HUMAN")
-    print(f"  2. 填完后跑:python scripts/check_step.py --workdir {workdir_path} --step {target}-review")
+    print(f"  2. 填完后跑:python scripts/check_step.py --workdir \"{workdir_path}\" --step {target}-review")
     print("  3. PASS / NEEDS_HUMAN → 继续下一阶段")
     print("     P0_OPEN → 修复后重审(≤3 轮)")
     print("     FAIL → 用户决定是否重跑(过程建议,不强制)")
