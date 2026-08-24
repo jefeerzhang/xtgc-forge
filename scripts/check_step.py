@@ -420,10 +420,16 @@ def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
         gate, status, _time, quote = cells[0], cells[1], cells[2], cells[3]
         if "确认" not in status and "通过" not in status:
             continue
-        if not quote or "<" in quote or "待填" in quote:
-            continue  # 占位符不算确认
+        if not quote:
+            continue
+        # 占位符不算确认:剥掉占位标记后无实义内容的原话(<待填>/<用户原话>)跳过;
+        # 含 < 的真实原话(如「要求 t_score<0.5」)必须保留
+        if not re.sub(r"[<>【】《》\[\]]|待填", "", quote).strip():
+            continue
         for g in REQUIRED_GATES:
-            if re.search(rf"(?:CP)?{re.escape(g)}\b", gate):
+            # (?!\d) 而非 \b:\b 把汉字算 word char,「CP#1已确认」会失配;
+            # 它只排除编号延伸(CP#10 不误配 #1)
+            if re.search(rf"(?:CP)?{re.escape(g)}(?!\d)", gate):
                 confirmed.setdefault(g, []).append(quote)
 
     missing = [g for g in REQUIRED_GATES if g not in confirmed]
@@ -542,9 +548,14 @@ def _strip_md_structure(text: str) -> str:
 
 
 def check_readability(content: str) -> list[str]:
-    """可读性闸门:正文(开头→「# 整合附录」前)反黑话 + 断句。附录为技术对照区,豁免。"""
+    """可读性闸门:正文(开头→整合附录标题前)反黑话 + 断句。附录为技术对照区,豁免。
+
+    附录标题按 markdown 标题行识别(任意层级/可带序号/空格可选),
+    如「# 整合附录」「## 三、整合附录」「#整合附录」均豁免。
+    """
     errors = []
-    idx = content.find("# 整合附录")
+    m = re.search(r"^#{1,6}\s*[^\n]*整合附录", content, re.MULTILINE)
+    idx = m.start() if m else -1
     body = content if idx == -1 else content[:idx]
 
     # 1. 黑话禁止
@@ -775,11 +786,16 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     # 两段式:先宽捕获 verdict 值(在空白/中英文句读/markdown 符号处截断,
     # 避免把 "verdict: PASS,继续" 里的 ",继续" 一起吃进来),再校验合法集合。
     # 这样非法值(如 verdict: MAYBE)能报出「值 X 不在合法集合」,而不是误报「缺少字段」。
-    verdict_row = re.search(
-        r"verdict\s*:\s*\**\s*\`?([^\s,，;；。\*\`]+)",
-        content,
-        re.IGNORECASE,
+    # 取最后一次匹配:正文转述历史轮次(如「第 1 轮 verdict: FAIL」)先于最终结论出现,
+    # 最近一次声明才是权威 verdict。
+    verdict_matches = list(
+        re.finditer(
+            r"verdict\s*:\s*\**\s*\`?([^\s,，;；。\*\`]+)",
+            content,
+            re.IGNORECASE,
+        )
     )
+    verdict_row = verdict_matches[-1] if verdict_matches else None
     if not verdict_row:
         hard_errors.append(
             "review_" + target + ".md 缺少 verdict 字段(需 `verdict: PASS|P0_OPEN|FAIL|NEEDS_HUMAN`)"
