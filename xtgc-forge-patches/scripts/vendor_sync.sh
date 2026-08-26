@@ -505,7 +505,10 @@ apply_one() {
         fi
         log_ok "[$skill] VERSION.md 已更新（last_verified → $today，vendored_from → $vendored_from）：$version_md"
     done
-    log_info "[$skill] vendored_commit 需人工核实为本次同步的上游 commit（tarball 抓取无 SHA）"
+    # 技术决策：fetch 使用 tarball 抓取避免全量 clone 与额外的 GitHub API 依赖，
+    # 本地解包无法直接提取上游完整 commit SHA。为防止写入伪造/过期哈希，
+    # 此处不自动盲写 vendored_commit，显式提示由维护者在核对后手工回填。
+    log_info "[$skill] vendored_commit 需人工核实为本次同步的上游 commit（tarball 抓取无 SHA 决策说明见 README）"
 
     # 清理 staging（apply 完成）
     rm -rf "$staging"

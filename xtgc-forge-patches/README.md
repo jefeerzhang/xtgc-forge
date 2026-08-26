@@ -78,6 +78,7 @@ CHANGELOG 草稿（你润色）：
 2. **没替你 git commit / push** —— 由你审过后执行
 3. ~~**没写 vendor_sync.sh**~~ —— 已于 R04 落地（`scripts/vendor_sync.sh`，4 子命令），apply（3-way merge）由 R05 补齐（见 `R04-vendor-sync-mvp.md` §5）
 4. **没做 4 维 schema 升级（→ vendored_at + upstream_version 联动）** —— 留待后续
+5. **apply 不自动获取上游 commit SHA** —— 技术决策：fetch 采用轻量 tarball 抓取，避免全量 clone 开销与 GitHub API 鉴权/Rate Limit 依赖。解压包内不含 git 元数据，因此 `apply` 会诚实更新 `last_verified` 和 `vendored_from`，但不自动盲写 `vendored_commit`，显式提示人工核实填入，确保版本锁定的真实性。
 
 ---
 

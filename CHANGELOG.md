@@ -27,6 +27,8 @@
 
 ## v0.3.20 · 2026-08-24 · 审计驱动稳健性收口(17 项缺陷 + 测试 38 → 64)
 
+> 历史注记: 2026-08-23 曾短暂提交过内置 superpowers-zh 子 skill 的草案版本并标为 v0.3.20 (commit `4554a757`); 同日经仓库评审认为与选题主领域偏离过远而完整回滚至 v0.3.19 (commit `ea5980d`, yanked)。当前正式发布的 v0.3.20 版本号为重用, 专注于审计驱动的稳健性收口。
+
 **主线**:v0.3.19 收口的是「规范说一套,代码做另一套」,本次收口的是「测试全绿,真实环境仍不可靠」。两个并行只读审计 agent 深读三个脚本,产出 17 个全部经临时脚本验证的 bug 候选 + 一批覆盖缺口。最刺眼的事实:全套测试强制 `PYTHONIOENCODING=utf-8`,恰好把「Windows 管道默认 GBK 时 `print("✅")` 抛 UnicodeEncodeError、通过的报告也 exit 1」这条必踩路径完全遮蔽;`init_project.py --name/--branch/--language` 要替换的占位符在模板里根本不存在,是空操作,而 SKILL.md 还在教用户传;四个核心闸函数(`check_interaction_log` / `check_rerun_record` / `check_topic_scores` / `check_readability`)零直测,golden 只走 happy path。修复按四批落地,每批先写会红的测试再修,独立 commit。
 
 1. **批次 1 — 编码稳健性**:`check_step.py` / `init_project.py` / `review.py` 入口新增 `_force_utf8_stdio()`(GBK 管道下 emoji 崩溃导致 PASS 也 exit 1、init 在 14 个文件写盘后崩溃);`check_step.py` 新增 `_read_text_utf8()`,编辑器存成 GBK 的产物文件得到「转存 UTF-8」提示而非裸 traceback。新增 `tests/test_encoding_robustness.py`,刻意以 GBK stdio 子进程运行(5 用例)
