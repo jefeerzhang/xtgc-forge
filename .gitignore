@@ -25,3 +25,6 @@ outputs/
 
 # 探测期 Nero1688 上游 clone 产物(vendor/ 已内置,此目录不应再出现)
 Nero1688/
+
+# vendor_sync.sh fetch 临时目录（不入库）
+.vendor_staging/
