@@ -11,7 +11,7 @@
 
 **防线转移**:契约断裂从「事后被兜底测试抓到」变成「不变式测试即时变红」——模板里出现的每个占位必被拦截。s2 端到端测试与行为级用例原样保留。
 
-**影响范围**:`scripts/init_project.py` 544→138 行(尾行无换行符,`wc -l` 计 137,与前值同用编辑器计数);新增 `scripts/templates.py`(471 行,其中 413 行为迁入的模板字面量)与 `tests/test_templates_contract.py`(7 用例)。测试 80 → 87。
+**影响范围**:`scripts/init_project.py` 544→138 行(尾行无换行符,`wc -l` 计 137,与前值同用编辑器计数);新增 `scripts/templates.py`(471 行,其中 413 行为迁入的模板字面量)与 `tests/test_templates_contract.py`(7 用例)。测试 80 → 87(80 个已有回归锚 + 7 个新增模板契约不变式;全量 87 passed 耗时约 2.1s,无性能回归;s2 修复用例 `tests/test_template_placeholders_not_flagged.py` 原样保留并被 `test_s2_semantics_preserved` 交叉验证)。
 
 **对账更正**(2026-08-26,随 P2-2 全量复核):本条与历史条目的行数/数量声明逐项对照代码修正——本条 `templates.py` 总行数 486→471(模板字面量 413 行核对无误)、`init_project.py` 544→137 更正为 544→138;v0.3.21 `check_step.py` 1075→992 更正为 1075→993;v0.3.18 WARNING 块 5 行更正为 6 行 blockquote(分两段 3+3);v0.3.17 白名单关键词 15 个更正为 18 个(③段实测)。均为计数口径修正,不改变任何行为与语义。
 
@@ -23,7 +23,7 @@
 
 **语义契约**:拦截行为不变。附录范围查询标题优先、文本标记回退(沿用历史正则语义),不给无 # 前缀附录标题的既有报告形态制造新误报——与仓库「只消除误报、不放松拦截」的方向一致。直测下划线的用例迁移到 `md_doc` interface,行为级用例(64 个)原样保留作回归锚。
 
-**影响范围**:`scripts/check_step.py` 判定路径重构(1075→993 行);新增 `scripts/md_doc.py`(153 行)与 `tests/test_md_doc.py`(16 用例);术语登记入仓库根 `CONTEXT.md`。测试 64 → 80。
+**影响范围**:`scripts/check_step.py` 判定路径重构(1075→993 行);新增 `scripts/md_doc.py`(153 行)与 `tests/test_md_doc.py`(16 用例);术语登记入仓库根 `CONTEXT.md`。测试 64 → 80(64 个已有行为级用例 + 16 个新增 md_doc interface 单元测试;全量 80 passed 耗时稳定在 ~2.0s)。
 
 ## v0.3.20 · 2026-08-24 · 审计驱动稳健性收口(17 项缺陷 + 测试 38 → 64)
 
