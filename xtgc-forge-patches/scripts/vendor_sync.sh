@@ -321,6 +321,220 @@ cmd_diff() {
     fi
 }
 
+# === apply 核心：3-way merge (base=HEAD, mine=vendored, theirs=staging) ===
+# 策略：
+#   - staging 独有     → 上游新增，复制
+#   - vendored 独有    → 本地独有（用户定制？），不删
+#   - 内容相同         → 无需操作
+#   - mine==base       → 本地没改，theirs 赢（接受上游）
+#   - theirs==base     → 上游没改，mine 赢（保留本地）
+#   - 都不等           → 冲突，列文件不自动 resolve，备份到 .vendor_backup/<skill>.<ts>/conflicts/
+apply_one() {
+    local skill="$1"
+    local dry_run="${2:-true}"
+
+    local vendored="$VENDOR_DIR/$skill"
+    local staging="$STAGING_DIR/$skill"
+
+    if [ ! -d "$vendored" ]; then
+        log_err "[$skill] vendored 不存在: $vendored"
+        return 1
+    fi
+    if [ ! -d "$staging" ]; then
+        log_err "[$skill] staging 不存在: $staging（先跑 fetch）"
+        return 1
+    fi
+
+    local base_head=""
+    base_head=$(git -C "$XTGC_ROOT" rev-parse HEAD 2>/dev/null || echo "")
+
+    echo ""
+    echo "════════════════════════════════════════════════════════════════════"
+    if [ "$dry_run" = "true" ]; then
+        log_info "[DRY-RUN] [$skill] 计划 apply（不写文件）"
+    else
+        log_info "[APPLY] [$skill] 执行 apply"
+    fi
+    echo "════════════════════════════════════════════════════════════════════"
+    echo "  base   = ${XTGC_ROOT} @ ${base_head:-<no-git>}"
+    echo "  mine   = $vendored"
+    echo "  theirs = $staging"
+
+    local s_files v_files
+    s_files=$(cd "$staging" && find . -type f 2>/dev/null | sort)
+    v_files=$(cd "$vendored" && find . -type f 2>/dev/null | sort)
+
+    local take_new=() keep_local=() take_theirs=() keep_mine=() conflicts=() same=()
+
+    # 遍历 staging 全部文件 → 分类
+    while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        local s_file="$staging/$rel"
+        local v_file="$vendored/$rel"
+        if [ ! -f "$v_file" ]; then
+            take_new+=("$rel")
+            continue
+        fi
+        local s_content v_content b_content=""
+        # 规范化 rel：find 输出带 ./ 前缀（git show 拒绝 ./）
+        local rel_clean="${rel#./}"
+        # 规范化 EOL：core.autocrlf=true 让 vendored 工作树带 CRLF；
+        # 比较前 tr -d '\r'，避免误判冲突
+        s_content=$(cat "$s_file" | tr -d '\r')
+        v_content=$(cat "$v_file" | tr -d '\r')
+        if [ -n "$base_head" ]; then
+            b_content=$(git -C "$XTGC_ROOT" show "${base_head}:vendor/${skill}/${rel_clean}" 2>/dev/null | tr -d '\r' || echo "")
+        fi
+        if [ "$v_content" = "$s_content" ]; then
+            same+=("$rel")
+        elif [ "$v_content" = "$b_content" ]; then
+            take_theirs+=("$rel")
+        elif [ "$s_content" = "$b_content" ]; then
+            keep_mine+=("$rel")
+        else
+            conflicts+=("$rel")
+        fi
+    done <<< "$s_files"
+
+    # 仅 vendored 独有（=本地定制）
+    while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        if [ ! -f "$staging/$rel" ]; then
+            keep_local+=("$rel")
+        fi
+    done <<< "$v_files"
+
+    echo ""
+    echo "  📊 分类统计："
+    echo "    ✅ 内容相同      ：${#same[@]}"
+    echo "    🆕 上游新增      ：${#take_new[@]}"
+    echo "    🔄 上游更新      ：${#take_theirs[@]}（将覆盖）"
+    echo "    📌 本地独有      ：${#keep_local[@]}（保留，不删）"
+    echo "    🔒 本地定制保留  ：${#keep_mine[@]}（上游未动，本地改了，保留）"
+    echo "    ⚠️   冲突（需人工）：${#conflicts[@]}"
+    if [ ${#conflicts[@]} -gt 0 ]; then
+        echo ""
+        echo "  ⚠️  冲突文件："
+        printf '      - %s\n' "${conflicts[@]}"
+    fi
+
+    if [ "$dry_run" = "true" ]; then
+        echo ""
+        log_info "[DRY-RUN] 未修改文件。加 --write 真执行。"
+        return 0
+    fi
+
+    # 真 apply：先备份整个 vendored
+    local ts backup_dir conflict_dir
+    ts=$(date +%Y%m%d_%H%M%S)
+    backup_dir="$XTGC_ROOT/.vendor_backup/${skill}.${ts}"
+    mkdir -p "$backup_dir"
+    # 用 cp -r（保留结构）
+    (cd "$vendored" && tar -cf - .) | (cd "$backup_dir" && tar -xf -)
+    log_ok "[$skill] 备份原 vendored → $backup_dir"
+
+    # 写 take_new + take_theirs
+    local rel
+    for rel in "${take_new[@]}" "${take_theirs[@]}"; do
+        [ -z "$rel" ] && continue
+        local dst_dir
+        dst_dir="$vendored/$(dirname "$rel")"
+        [ "$dst_dir" = "$vendored/." ] && dst_dir="$vendored"
+        mkdir -p "$dst_dir"
+        cp "$staging/$rel" "$vendored/$rel"
+    done
+
+    # 冲突：备份到 backup_dir/conflicts/<rel>.theirs + .mine
+    if [ ${#conflicts[@]} -gt 0 ]; then
+        conflict_dir="$backup_dir/conflicts"
+        mkdir -p "$conflict_dir"
+        for rel in "${conflicts[@]}"; do
+            local cd
+            cd="$conflict_dir/$(dirname "$rel")"
+            [ "$cd" = "$conflict_dir/." ] && cd="$conflict_dir"
+            mkdir -p "$cd"
+            cp "$staging/$rel" "$conflict_dir/$rel.theirs"
+            cp "$vendored/$rel" "$conflict_dir/$rel.mine"
+        done
+        log_warn "[$skill] ${#conflicts[@]} 个冲突未覆盖，已备份 mine+theirs 到 $conflict_dir"
+        echo "    人工解决后手动 copy（不要覆盖本地独有定制）："
+        echo "      diff $conflict_dir/<rel>.mine $conflict_dir/<rel>.theirs"
+        echo "      cp $conflict_dir/<rel>.theirs vendor/$skill/<rel>  # 接受上游"
+    fi
+
+    # 更新 VERSION.md 的 last_verified
+    local version_md="$VENDOR_VERSION_DIR/${skill}-VERSION.md"
+    if [ -f "$version_md" ]; then
+        local today
+        today=$(date +%Y-%m-%d)
+        if grep -q '`last_verified`' "$version_md"; then
+            sed -i.bak -E "s/(\`last_verified\` \| \`).*(\`)/\1${today}\2/" "$version_md" && rm -f "${version_md}.bak"
+            log_ok "[$skill] VERSION.md last_verified → $today"
+        fi
+    fi
+
+    # 清理 staging（apply 完成）
+    rm -rf "$staging"
+    log_ok "[$skill] staging 已清理"
+
+    echo ""
+    log_ok "[$skill] apply 完成 → $vendored"
+}
+
+cmd_apply() {
+    local dry_run=true
+    local target=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --write|--no-dry-run) dry_run=false ;;
+            --dry-run)            dry_run=true ;;
+            --all)                target="--all" ;;
+            --help|-h)
+                cat <<EOF
+用法: bash vendor_sync.sh apply [--all | <skill>] [--write]
+
+选项:
+  (无)         单 skill 模式，需指定 skill 名
+  --all        全部已注册 skill 顺序 apply
+  --dry-run    默认，仅展示计划不写文件（默认开）
+  --write      真执行：备份原 vendored 到 .vendor_backup/<skill>.<ts>/，
+               覆盖非冲突文件，更新 VERSION.md，清理 staging
+  --help       本帮助
+
+返回值:
+  0 = 成功（含无冲突情况）
+  1 = 有冲突需人工，或 staging 缺失
+EOF
+                return 0 ;;
+            *) target="$1" ;;
+        esac
+        shift
+    done
+
+    if [ -z "$target" ]; then
+        log_err "用法: bash vendor_sync.sh apply {<skill>|--all} [--write]"
+        return 2
+    fi
+
+    local ok=0 fail=0
+    if [ "$target" = "--all" ]; then
+        log_info "apply --all (5 skills, dry_run=$dry_run)"
+        local skill
+        for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
+            if apply_one "$skill" "$dry_run"; then
+                ok=$((ok+1))
+            else
+                fail=$((fail+1))
+            fi
+        done
+        echo ""
+        log_info "apply 完成: ok=$ok fail=$fail"
+        [ $fail -gt 0 ] && return 1 || return 0
+    else
+        apply_one "$target" "$dry_run"
+    fi
+}
+
 # === 子命令：help ===
 cmd_help() {
     # 打印头部注释
@@ -333,7 +547,7 @@ case "${1:-help}" in
     check)       shift; cmd_check "$@" ;;
     fetch)       shift; cmd_fetch "$@" ;;
     diff)        shift; cmd_diff "$@" ;;
-    apply)       log_warn "apply 不在 R04 MVP 范围（R05 单独做）"; exit 1 ;;
+    apply)       shift; cmd_apply "$@" ;;
     --help|-h|help|"")  cmd_help ;;
     *)
         log_err "未知子命令: $1"

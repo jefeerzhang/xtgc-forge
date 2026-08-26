@@ -28,3 +28,5 @@ Nero1688/
 
 # vendor_sync.sh fetch 临时目录（不入库）
 .vendor_staging/
+# vendor_sync.sh apply 备份目录（不入库）
+.vendor_backup/
