@@ -11,7 +11,9 @@
 
 **防线转移**:契约断裂从「事后被兜底测试抓到」变成「不变式测试即时变红」——模板里出现的每个占位必被拦截。s2 端到端测试与行为级用例原样保留。
 
-**影响范围**:`scripts/init_project.py` 544→137 行;新增 `scripts/templates.py`(486 行,其中 413 行为迁入的模板字面量)与 `tests/test_templates_contract.py`(7 用例)。测试 80 → 87。
+**影响范围**:`scripts/init_project.py` 544→138 行(尾行无换行符,`wc -l` 计 137,与前值同用编辑器计数);新增 `scripts/templates.py`(471 行,其中 413 行为迁入的模板字面量)与 `tests/test_templates_contract.py`(7 用例)。测试 80 → 87。
+
+**对账更正**(2026-08-26,随 P2-2 全量复核):本条与历史条目的行数/数量声明逐项对照代码修正——本条 `templates.py` 总行数 486→471(模板字面量 413 行核对无误)、`init_project.py` 544→137 更正为 544→138;v0.3.21 `check_step.py` 1075→992 更正为 1075→993;v0.3.18 WARNING 块 5 行更正为 6 行 blockquote(分两段 3+3);v0.3.17 白名单关键词 15 个更正为 18 个(③段实测)。均为计数口径修正,不改变任何行为与语义。
 
 ## v0.3.21 · 2026-08-26 · 文档解析深化:三套章节切分合并为 `md_doc` 深 module
 
@@ -21,7 +23,7 @@
 
 **语义契约**:拦截行为不变。附录范围查询标题优先、文本标记回退(沿用历史正则语义),不给无 # 前缀附录标题的既有报告形态制造新误报——与仓库「只消除误报、不放松拦截」的方向一致。直测下划线的用例迁移到 `md_doc` interface,行为级用例(64 个)原样保留作回归锚。
 
-**影响范围**:`scripts/check_step.py` 判定路径重构(1075→992 行);新增 `scripts/md_doc.py`(153 行)与 `tests/test_md_doc.py`(16 用例);术语登记入仓库根 `CONTEXT.md`。测试 64 → 80。
+**影响范围**:`scripts/check_step.py` 判定路径重构(1075→993 行);新增 `scripts/md_doc.py`(153 行)与 `tests/test_md_doc.py`(16 用例);术语登记入仓库根 `CONTEXT.md`。测试 64 → 80。
 
 ## v0.3.20 · 2026-08-24 · 审计驱动稳健性收口(17 项缺陷 + 测试 38 → 64)
 
@@ -87,8 +89,8 @@
    - `--step scan-review` / `--step topics-review` 子命令只在 status=FAIL 时 sys.exit(1);WARN 仍返回 True
    - `--step all` 循环:review 缺失/警告写到 stderr(便于 grep),但不计入 failures;金样例 review 缺失从 FAIL 降为 stderr 警告,失败项不变(只剩有意缺省的 Step2a/5)
 3. **SKILL.md 「机器闸门 + 独立审查」段降级措辞**:「刚性闸门」→「机器闸门(过程建议)」;新增「审查作为过程建议」子段,解释为什么降级、列出 NEEDS_HUMAN 语义、引用 CHANGELOG v0.2.7 同款诚实声明
-4. **`scripts/review.py` 两个 VERDICT_TEMPLATES 块加 WARNING 块**:信任边界段(`## 7. 信任边界声明`)开头加 **WARNING · v0.3.18 审查降级说明**(5 行 blockquote),明确「verdict 仅作过程留痕,不可作为合规依据、不可作为学术可信度背书」,并把 `verdict` 行的合法值扩到 `PASS / P0_OPEN / FAIL / NEEDS_HUMAN`(加 NEEDS_HUMAN 选项)。
-   - **更正**:原提交说明写「同时简化信任边界声明(原本 4 行,新版 2 行)」,事实是 *baseline 已是 2 行,新版叠加 WARNING 块后实际为 ~8 行*——本次按诚实原则更正:信任边界声明本身**未压缩**,WARNING 块是**新增的诚实免责声明**,二者并列存在而非简化
+4. **`scripts/review.py` 两个 VERDICT_TEMPLATES 块加 WARNING 块**:信任边界段(`## 7. 信任边界声明`)开头加 **WARNING · v0.3.18 审查降级说明**(6 行 blockquote,分两段 3+3),明确「verdict 仅作过程留痕,不可作为合规依据、不可作为学术可信度背书」,并把 `verdict` 行的合法值扩到 `PASS / P0_OPEN / FAIL / NEEDS_HUMAN`(加 NEEDS_HUMAN 选项)。
+   - **更正**:原提交说明写「同时简化信任边界声明(原本 4 行,新版 2 行)」,事实是 *baseline 已是 2 行,新版叠加 WARNING 块后实际为 6 行 blockquote*——本次按诚实原则更正:信任边界声明本身**未压缩**,WARNING 块是**新增的诚实免责声明**,二者并列存在而非简化
 5. **README.md Examples badge + LEGACY 提示**:`2 (1 gold)` → `2 (1 gold · 1 LEGACY)`;加一行明确说明「气候风险…/ 是 v0.2.x 旧形态,不通过 v0.3 闸门」
 6. **`examples/气候风险对企业绿色转型/README.md` 头部加 ⚠️ LEGACY 块**:指向 LEGACY.md + 金样例路径,第一次进仓库的人不会被旧样例的 FAIL 误导
 7. **不破坏**:5 个 Checkpoint、六道防线、六段式主报告闸、反坍缩/反黑话/反黑箱校验全部保留;Step6 主报告闸、Step3a 反坍缩、topic_scores 评分等仍 FAIL-as-before
@@ -108,7 +110,7 @@
 
 4. **占位符正则收紧(C1 + Standards #4)**:`scripts/check_step.py` 原通用匹配 `r"<[\u4e00-\u9fff][^>]*>"` 1 字起步,会误判合法正文「用户 <文献> 目录」「<中文摘要>」等。本次收紧为双层:
    - **通用**:4 汉字起步 `r"<[一-鿿]{4,}[^>]*>"`,过滤掉 1-3 字尖括号(`<文献>`/`<用户>`/`<什么>`/`<中文>`)
-   - **关键词白名单兜底**:覆盖 `<来源 Gap 编号>` / `<Gap 编号>` / `<研究类型 标签>` / `<填这里>` 等 1-3 字或含空格/Gap 的混合占位符(15 个 init 模板家族关键词)
+   - **关键词白名单兜底**:覆盖 `<来源 Gap 编号>` / `<Gap 编号>` / `<研究类型 标签>` / `<填这里>` 等 1-3 字或含空格/Gap 的混合占位符(18 个 init 模板家族关键词,2026-08-26 P2-2 复核实测③段 18 个,原写 15 个)
    - 实测 init 模板 12 个占位符全部命中、金样例全部 clean;仍存在的 corner case:4 字以上纯描述性尖括号(如 `<中文摘要>` `<显著水平>`)会被拦,建议改写成「中文摘要」「显著水平」(无尖括号),CHANGELOG 在此注明 trade-off
 
 5. **不破坏**:`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review,均为金样例有意缺省);Step 6 主报告闸仍 PASS;`process/` 子目录回退、占位符拦截、五道防线、`check_step.py` 自身闸门逻辑全部保留;`_resolve_workdir_file` 行为不变(主报告 `00_研究计划报告.md` 仍走「根目录 → process/」回退,与 v0.3.16 一致)
