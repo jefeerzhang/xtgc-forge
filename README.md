@@ -240,7 +240,13 @@ bash check-ready.sh
 │   └── 气候风险对企业绿色转型/           旧过程样例（见 LEGACY.md，已升级反坍缩格式）
 ├── check-ready.sh                        就绪检查脚本
 ├── test-prompts.json                     固化测试样例（3 条）
-├── scripts/                              init/check/review 闸门脚本
+├── scripts/                              init/check/review 闸门脚本与 vendor 同步工具
+│   ├── init_project.py                   初始化工作目录与模板产物
+│   ├── check_step.py                     机器闸门校验
+│   ├── templates.py                      模板契约深 module
+│   ├── md_doc.py                         文档解析深 module
+│   ├── review.py                         独立审查模板生成
+│   └── vendor_sync.sh                    vendor 子 skill 漂移检查与同步工具
 └── outputs/                              本地运行的中间文件（.gitignore 排除，不入库）
 ```
 

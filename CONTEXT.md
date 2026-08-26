@@ -48,4 +48,4 @@
 ## 供应链
 
 - **vendored skill**：`vendor/<skill>/` 下的上游学术技能副本，以 `VERSION.md`
-  登记上游元数据；`vendor_sync.sh` 负责漂移探测与 3-way merge 同步。
+  登记上游元数据；`scripts/vendor_sync.sh` 负责漂移探测与 3-way merge 同步（list/check/fetch/diff/apply）。

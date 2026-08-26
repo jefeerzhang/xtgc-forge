@@ -771,7 +771,10 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 ├── scripts/
 │   ├── init_project.py                   初始化工作目录(生成 00_交付说明.md / 00_任务元信息.md / Step1-input.md / Step2a-points.md / Step2b-literature-matrix.md / Step2c-gap-verdicts.md / Step3a-candidate-themes.md / Step3b-selected-theme.md / Step4-hypotheses.md / Step5-identification-strategy.md / Step6-summary.md / 00_研究计划报告.md / interaction-log.md / topic_scores.json;00_复跑决策记录.md 与 review_*.md 为过程产物,由流水线后续阶段生成,但同属防覆盖哨兵 TRACKED_FILES)
 │   ├── check_step.py                     机器闸门校验(过程建议,详见「审查作为过程建议」段)
-│   └── review.py                         独立审查模板生成
+│   ├── templates.py                      模板契约深 module(单一真源与派生拦截模式)
+│   ├── md_doc.py                         文档解析深 module(标题树模型与切分查询)
+│   ├── review.py                         独立审查模板生成
+│   └── vendor_sync.sh                    vendor 子 skill 漂移检查与同步工具(list/check/fetch/diff/apply)
 └── check-ready.sh                        就绪检查(环境 + 依赖 + 文献目录)
 ```
 

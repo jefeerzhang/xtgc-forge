@@ -55,6 +55,14 @@ PY
       - name: 金样例集成断言(--step 6 PASS + --step all == 2)
         run: python -m pytest tests/test_golden_step_all.py -q
 
+      - name: 全量 pytest 单元与契约测试
+        run: python -m pytest -q
+
+      - name: 供应链 vendor 状态检查(vendor_sync.sh list)
+        run: |
+          bash -n scripts/vendor_sync.sh
+          bash scripts/vendor_sync.sh list
+
       - name: 模板占位符冒烟(未填充模板必须被拦)
         run: |
           tmp=$(mktemp -d)
