@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-选题工坊 · 刚性闸门检查脚本 (版本号动态读取自 SKILL.md)
+选题工坊 · 机器闸门检查脚本 (版本号动态读取自 SKILL.md;v0.3.18 起审查降级为过程建议)
 
 校验每个 Step 产物的完整性、关键字段、最小内容长度。
 Step 6 额外校验主报告质量:附录结构、矩阵表行、段落深度、禁模板占位符。
@@ -959,7 +959,7 @@ def check_step(workdir: str, step: str, _from_all: bool = False) -> tuple[bool, 
 
 def main():
     VERSION = _self_version()
-    parser = argparse.ArgumentParser(description=f"选题工坊 · 刚性闸门检查 v{VERSION}")
+    parser = argparse.ArgumentParser(description=f"选题工坊 · 机器闸门检查 v{VERSION}(v0.3.18 起审查降级为过程建议)")
     parser.add_argument("--workdir", "-w", required=True, help="工作目录(产出文件所在)")
     parser.add_argument("--step", "-s", required=True, help=f"Step 编号:{', '.join(VALID_STEPS)}")
     args = parser.parse_args()

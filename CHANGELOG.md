@@ -87,7 +87,8 @@
    - `--step scan-review` / `--step topics-review` 子命令只在 status=FAIL 时 sys.exit(1);WARN 仍返回 True
    - `--step all` 循环:review 缺失/警告写到 stderr(便于 grep),但不计入 failures;金样例 review 缺失从 FAIL 降为 stderr 警告,失败项不变(只剩有意缺省的 Step2a/5)
 3. **SKILL.md 「机器闸门 + 独立审查」段降级措辞**:「刚性闸门」→「机器闸门(过程建议)」;新增「审查作为过程建议」子段,解释为什么降级、列出 NEEDS_HUMAN 语义、引用 CHANGELOG v0.2.7 同款诚实声明
-4. **`scripts/review.py` 两个 VERDICT_TEMPLATES(VERDICT_TEMPLATES 块)加 WARNING 块**:信任边界段开头加 **WARNING · v0.3.18 审查降级说明**,明确「verdict 仅作过程留痕,不可作为合规依据」;同时简化信任边界声明(原本 4 行,新版 2 行,减少模板冗余);verdict 行加上 NEEDS_HUMAN 选项
+4. **`scripts/review.py` 两个 VERDICT_TEMPLATES 块加 WARNING 块**:信任边界段(`## 7. 信任边界声明`)开头加 **WARNING · v0.3.18 审查降级说明**(5 行 blockquote),明确「verdict 仅作过程留痕,不可作为合规依据、不可作为学术可信度背书」,并把 `verdict` 行的合法值扩到 `PASS / P0_OPEN / FAIL / NEEDS_HUMAN`(加 NEEDS_HUMAN 选项)。
+   - **更正**:原提交说明写「同时简化信任边界声明(原本 4 行,新版 2 行)」,事实是 *baseline 已是 2 行,新版叠加 WARNING 块后实际为 ~8 行*——本次按诚实原则更正:信任边界声明本身**未压缩**,WARNING 块是**新增的诚实免责声明**,二者并列存在而非简化
 5. **README.md Examples badge + LEGACY 提示**:`2 (1 gold)` → `2 (1 gold · 1 LEGACY)`;加一行明确说明「气候风险…/ 是 v0.2.x 旧形态,不通过 v0.3 闸门」
 6. **`examples/气候风险对企业绿色转型/README.md` 头部加 ⚠️ LEGACY 块**:指向 LEGACY.md + 金样例路径,第一次进仓库的人不会被旧样例的 FAIL 误导
 7. **不破坏**:5 个 Checkpoint、六道防线、六段式主报告闸、反坍缩/反黑话/反黑箱校验全部保留;Step6 主报告闸、Step3a 反坍缩、topic_scores 评分等仍 FAIL-as-before
