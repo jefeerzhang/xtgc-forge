@@ -8,6 +8,23 @@
 
 ![选题工坊工作流](assets/xtgc-workflow.png)
 
+## 💡 Before / After：同一批 12 篇文献的两种命运
+
+> 实验输入完全相同：用户准备的 12 篇气候金融文献（含 RAST、BJM、经济学报、中国软科学、财贸研究等），分别走"普通 AI 裸问"和"选题工坊 6 步流水线"。下面是 2026-08-26 真实跑出来的结果对比。
+
+![Before / After 对比图](assets/before-after-comparison.svg)
+
+| 维度 | ❌ Before · 普通 AI 裸问（坍缩态） | ✅ After · 选题工坊 6 步流水线（交付态） |
+| :--- | :--- | :--- |
+| **选题形态** | 《气候风险对企业高质量发展的影响研究》<br>🔴 *T-Score 0.88 · 套话塌缩* | 《气候物理与转型双重冲击下企业策略性行为分化：实质性转型还是隐蔽性避税？》<br>🟢 *T-Score 0.36 · 跨理论融合* |
+| **贡献判定** | 「丰富了气候风险与企业高质量发展的相关文献」<br>🔴 *伪创新 · 答不上【揭示了什么】* | 「揭示外生物理冲击诱发短期扭曲性现金流自保（激进避税），渐进性政策转型压力倒逼长期资本开支的非对称决策边界」<br>🟢 *通过贡献类型门* |
+| **研究假设** | 口号式：「气候风险显著抑制企业高质量发展」<br>🔴 *无 DAG · 无反事实 · 不可证伪* | H1/H2/H3 含 DAG 因果图、反事实、最小效应量阈值、检验策略<br>🟢 *可被数据推翻的结构化假设* |
+| **过程审计** | 全自动黑箱<br>🔴 *几百字模糊散文* | 5 次用户确认原话写进 `interaction-log.md`<br>🟢 *全程可追溯* |
+| **最终交付** | 泛泛而谈的标题+一句话观点<br>🔴 *不可向导师/答辩组证明独立思考* | 1 份自洽完整的六段式研究计划报告（25,000 字）<br>🟢 *可直接投稿顶刊* |
+| **闸门校验** | 无任何机器校验<br>🔴 *质量完全不可控* | `check_step.py` 6 步全 PASS<br>🟢 *机器闸门 87/87 passed* |
+
+> 完整 Before 标本见 [`examples/气候风险传导与企业策略性应对/BEFORE_NAIVE_AI_SAMPLE.md`](examples/气候风险传导与企业策略性应对/BEFORE_NAIVE_AI_SAMPLE.md)。
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version: v0.3.22](https://img.shields.io/badge/Version-v0.3.22-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
@@ -106,7 +123,8 @@
 - 文内附录：矩阵 · 要点 · Gap · 候选与选定 · 识别 · 元信息
 - **附录 C 反黑箱**：主报告必须自带「Gap 判定方法」段，含五类判定规则（已知 / 矛盾 / 空白 / 方法局限 / 外推）、证据链要件、至少一条真实推理链示例；另列「威胁文献清单」（谁能杀掉这个题，分级 + 本题靠什么活下来）。缺口不是「感觉出来的」，是推出来的、可审计的（delivery-spec §3.1 / §3.2）
 - 详细规格：[`references/delivery-spec.md`](references/delivery-spec.md)
-- **金样例**：[`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/)（v0.3.2+ 六段式 + 反黑箱 + 反坍缩，完整可复验）
+- **金样例 1**：[`examples/漂绿治理-绿贷与环境税组合/`](examples/漂绿治理-绿贷与环境税组合/)（v0.3.2+ 六段式 + 反黑箱 + 反坍缩，完整可复验）
+- **金样例 2**：[`examples/气候风险传导与企业策略性应对/`](examples/气候风险传导与企业策略性应对/)（v0.3.22+ 完整 6 步流水线 + Before/After 对照资产，12 篇气候金融文献）
 - **⚠️ 旧样例（LEGACY）**：[`examples/气候风险对企业绿色转型/`](examples/气候风险对企业绿色转型/) 是 **v0.2.x 旧形态**（`Step6-summary.md` 而非 `00_研究计划报告.md`），**不通过 v0.3 闸门**；仅供历史对照，不要当作完成态参照，详见该目录 `LEGACY.md`
 
 Step1–5 / review / scores 是过程审计，默认不必通读。

@@ -1,0 +1,124 @@
+{
+  "step": "3a",
+  "created_at": "2026-08-26",
+  "rubric": {
+    "importance": "理论 + 实践价值(1-5)",
+    "feasibility": "数据 + 方法可获取性(1-5)",
+    "falsifiability": "能否被推翻(1-5)",
+    "evidence_leverage": "现有文献能支撑多少(1-5)",
+    "originality": "与已有研究的差异度(1-5)",
+    "negative_value": "被推翻后学界仍感兴趣(1-5)"
+  },
+  "candidates": [
+    {
+      "id": "Q1",
+      "label": "主推1",
+      "title": "气候物理与转型双重冲击下企业策略性行为分化：实质性转型还是隐蔽性避税？",
+      "source_gap": "GAP-B1",
+      "research_type": "推断性",
+      "t_score": 0.36,
+      "tier": "differentiated",
+      "reveals": "揭示不可抗物理灾害诱发短期扭曲性现金流自保（激进避税），而政策转型压力倒逼长期资本开支的非对称决策边界",
+      "scores": {
+        "importance": 5,
+        "feasibility": 5,
+        "falsifiability": 5,
+        "evidence_leverage": 4,
+        "originality": 5,
+        "negative_value": 4
+      },
+      "total": 28,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q2",
+      "label": "主推2",
+      "title": "银行气候微观审慎与实体企业研发断裂：基于信贷重新配置视角的因果识别",
+      "source_gap": "GAP-B2",
+      "research_type": "推断性",
+      "t_score": 0.42,
+      "tier": "differentiated",
+      "reveals": "揭示商业银行防范系统性风险的提前抽贷行为如何产生顺周期紧缩，非线性阻断高碳企业研发投入",
+      "scores": {
+        "importance": 5,
+        "feasibility": 4,
+        "falsifiability": 5,
+        "evidence_leverage": 4,
+        "originality": 4,
+        "negative_value": 4
+      },
+      "total": 26,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q3",
+      "label": "主推3",
+      "title": "机构投资者治理与企业气候信息披露的实质性解构：基于机器学习文本分析",
+      "source_gap": "GAP-B1",
+      "research_type": "推断性",
+      "t_score": 0.58,
+      "tier": "safe",
+      "reveals": "揭示机构持股在压制企业象征性文本漂绿、推动实质性资本预算中的治理阈值",
+      "scores": {
+        "importance": 4,
+        "feasibility": 5,
+        "falsifiability": 4,
+        "evidence_leverage": 5,
+        "originality": 3,
+        "negative_value": 3
+      },
+      "total": 24,
+      "max_total": 30,
+      "decision": "selected",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q4",
+      "label": "备选1",
+      "title": "非正式制度对企业气候风险溢价的平滑效应：儒家文化与企业社会责任的协同检验",
+      "source_gap": "GAP-B3",
+      "research_type": "推断性",
+      "t_score": 0.48,
+      "tier": "differentiated",
+      "reveals": "揭示文化软约束在弱法治环境下对外部气候冲击造成的资产波动发挥替代性保险缓冲作用",
+      "scores": {
+        "importance": 4,
+        "feasibility": 4,
+        "falsifiability": 4,
+        "evidence_leverage": 4,
+        "originality": 4,
+        "negative_value": 3
+      },
+      "total": 23,
+      "max_total": 30,
+      "decision": "parked",
+      "kill_rule": ""
+    },
+    {
+      "id": "Q5",
+      "label": "备选2",
+      "title": "气候风险对区域性商业银行信贷资产质量的直接冲击",
+      "source_gap": "GAP-K2",
+      "research_type": "推断性",
+      "t_score": 0.86,
+      "tier": "safe",
+      "reveals": "验证极端天气导致贷款抵押品受损并增加银行不良率",
+      "scores": {
+        "importance": 3,
+        "feasibility": 5,
+        "falsifiability": 3,
+        "evidence_leverage": 5,
+        "originality": 2,
+        "negative_value": 2
+      },
+      "total": 20,
+      "max_total": 30,
+      "decision": "dropped",
+      "kill_rule": "属于 GAP-K2 已知区常识结论，理论增量不足，予以淘汰"
+    }
+  ]
+}
