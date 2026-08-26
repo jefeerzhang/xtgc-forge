@@ -3,7 +3,7 @@
 # 作者：R04 自动生成（2026-08-26）
 #
 # 设计原则（R02 E.3 + R02 §7 收口）：
-#   1. **永远不自动 apply** —— 把同步决策权留给用户
+#   1. **同步决策权留给用户** —— apply 默认 dry-run，真写需显式 --write
 #   2. **默认 dry-run** —— 任何写操作前用户审
 #   3. **失败静默** —— curl/网络异常只 INFO，不 WARN，避免噪音
 #   4. **零外部依赖** —— 只用 bash + curl + tar + diff + awk + grep + sed
@@ -14,13 +14,14 @@
 #   check   探测上游最新 commit（委托 R03 的 vendor-freshness-check.sh）
 #   fetch   拉上游 tarball 到 .vendor_staging/<skill>/
 #   diff    diff vendored vs .vendor_staging/<skill>
-#   apply   **不在 MVP 范围** —— R05 单独做（3-way merge 风险）
+#   apply   3-way merge 把 staging 写回 vendor/（R05 已实现；默认 dry-run，--write 真执行）
 #
 # 用法：
 #   bash vendor_sync.sh list
 #   bash vendor_sync.sh check
 #   bash vendor_sync.sh fetch <skill>|--all
 #   bash vendor_sync.sh diff <skill>|--all
+#   bash vendor_sync.sh apply <skill>|--all [--write] [--no-backup]
 #   bash vendor_sync.sh --help
 
 set -e
@@ -40,6 +41,8 @@ VENDOR_DIR="$XTGC_ROOT/vendor"
 STAGING_DIR="$XTGC_ROOT/.vendor_staging"
 BACKUP_DIR="$XTGC_ROOT/.vendor_backup"
 DIFF_DIR="$XTGC_ROOT/.vendor_diff"
+# vendor-version/ 镜像目录（apply 后同步更新 <skill>-VERSION.md）
+VENDOR_VERSION_DIR="$(dirname "$SCRIPT_DIR")/vendor-version"
 
 # R03 的 probe helper 路径（默认复用 check）
 PROBE_HELPER="${PROBE_HELPER:-$(dirname "$SCRIPT_DIR")/check-ready-probe/vendor-freshness-check.sh}"
@@ -94,7 +97,7 @@ cmd_list() {
         IFS='|' read -r repo path commit verified <<< "$info"
         upstream_short=$(echo "$repo" | sed 's|https://github.com/||' | cut -c1-40)
         # 计算 age
-        if [ -n "$verified" ] && [ "$verified" != "" ]; then
+        if [ -n "$verified" ]; then
             local today_epoch verified_epoch days
             today_epoch=$(date +%s 2>/dev/null || echo 0)
             verified_epoch=$(date -d "$verified" +%s 2>/dev/null || echo 0)
@@ -135,7 +138,7 @@ fetch_one() {
     local info repo path commit branch
     info=$(parse_version_md "$skill" 2>/dev/null) || { log_err "$skill: VERSION.md 不存在"; return 1; }
     IFS='|' read -r repo path commit verified branch <<< "$info"
-    if [ -z "$repo" ] || [ "$repo" = "" ]; then
+    if [ -z "$repo" ]; then
         log_err "$skill: upstream_repo 为空（VERSION.md 未填）"
         return 1
     fi
@@ -203,8 +206,6 @@ fetch_one() {
     fi
 }
 
-cmd_fetch_stub() { log_warn "fetch 尚未实现（R04 MVP 范围）"; return 1; }
-
 # === 子命令：fetch ===
 cmd_fetch() {
     local target="${1:---all}"
@@ -251,7 +252,7 @@ diff_one() {
     echo "  文件数：vendored=$v_files  staging=$s_files"
     # 2) 仅 vendored 独有（=本地补丁/本地注释）
     local only_v
-    only_v=$(cd "$staging" && find . -type f 2>/dev/null | while read f; do [ ! -f "$vendored/$f" ] && echo "$f"; done)
+    only_v=$(cd "$vendored" && find . -type f 2>/dev/null | while read f; do [ ! -f "$staging/$f" ] && echo "$f"; done)
     if [ -n "$only_v" ]; then
         echo ""
         echo "  ⚠️  vendored 独有（本地补丁，未在上游）："
@@ -259,7 +260,7 @@ diff_one() {
     fi
     # 3) 仅 staging 独有（=上游新增）
     local only_s
-    only_s=$(cd "$vendored" && find . -type f 2>/dev/null | while read f; do [ ! -f "$staging/$f" ] && echo "$f"; done)
+    only_s=$(cd "$staging" && find . -type f 2>/dev/null | while read f; do [ ! -f "$vendored/$f" ] && echo "$f"; done)
     if [ -n "$only_s" ]; then
         echo ""
         echo "  🆕 staging 独有（上游新增，vendored 缺）："
@@ -332,6 +333,7 @@ cmd_diff() {
 apply_one() {
     local skill="$1"
     local dry_run="${2:-true}"
+    local no_backup="${3:-false}"
 
     local vendored="$VENDOR_DIR/$skill"
     local staging="$STAGING_DIR/$skill"
@@ -376,14 +378,14 @@ apply_one() {
             continue
         fi
         local s_content v_content b_content=""
-        # 规范化 rel：find 输出带 ./ 前缀（git show 拒绝 ./）
+        # 规范化 rel：find 输出带 ./ 前缀（git show 拒绝 ./），必须先清再查 base
         local rel_clean="${rel#./}"
         # 规范化 EOL：core.autocrlf=true 让 vendored 工作树带 CRLF；
         # 比较前 tr -d '\r'，避免误判冲突
         s_content=$(cat "$s_file" | tr -d '\r')
         v_content=$(cat "$v_file" | tr -d '\r')
         if [ -n "$base_head" ]; then
-            b_content=$(git -C "$XTGC_ROOT" show "${base_head}:vendor/${skill}/${rel_clean}" 2>/dev/null | tr -d '\r' || echo "")
+            b_content=$(git -C "$XTGC_ROOT" show "${base_head}:vendor/${skill}/${rel_clean}" 2>/dev/null | tr -d '\r') || b_content=""
         fi
         if [ "$v_content" = "$s_content" ]; then
             same+=("$rel")
@@ -424,14 +426,19 @@ apply_one() {
         return 0
     fi
 
-    # 真 apply：先备份整个 vendored
+    # 真 apply：先备份整个 vendored（--no-backup 可跳过，不推荐）
     local ts backup_dir conflict_dir
     ts=$(date +%Y%m%d_%H%M%S)
-    backup_dir="$XTGC_ROOT/.vendor_backup/${skill}.${ts}"
-    mkdir -p "$backup_dir"
-    # 用 cp -r（保留结构）
-    (cd "$vendored" && tar -cf - .) | (cd "$backup_dir" && tar -xf -)
-    log_ok "[$skill] 备份原 vendored → $backup_dir"
+    if [ "$no_backup" = "true" ]; then
+        backup_dir=""
+        log_warn "[$skill] --no-backup：跳过备份（不推荐）"
+    else
+        backup_dir="$XTGC_ROOT/.vendor_backup/${skill}.${ts}"
+        mkdir -p "$backup_dir"
+        # 用 cp -r（保留结构）
+        (cd "$vendored" && tar -cf - .) | (cd "$backup_dir" && tar -xf -)
+        log_ok "[$skill] 备份原 vendored → $backup_dir"
+    fi
 
     # 写 take_new + take_theirs
     local rel
@@ -445,14 +452,14 @@ apply_one() {
     done
 
     # 冲突：备份到 backup_dir/conflicts/<rel>.theirs + .mine
-    if [ ${#conflicts[@]} -gt 0 ]; then
+    if [ ${#conflicts[@]} -gt 0 ] && [ -n "$backup_dir" ]; then
         conflict_dir="$backup_dir/conflicts"
         mkdir -p "$conflict_dir"
         for rel in "${conflicts[@]}"; do
-            local cd
-            cd="$conflict_dir/$(dirname "$rel")"
-            [ "$cd" = "$conflict_dir/." ] && cd="$conflict_dir"
-            mkdir -p "$cd"
+            local dst_dir
+            dst_dir="$conflict_dir/$(dirname "$rel")"
+            [ "$dst_dir" = "$conflict_dir/." ] && dst_dir="$conflict_dir"
+            mkdir -p "$dst_dir"
             cp "$staging/$rel" "$conflict_dir/$rel.theirs"
             cp "$vendored/$rel" "$conflict_dir/$rel.mine"
         done
@@ -460,18 +467,32 @@ apply_one() {
         echo "    人工解决后手动 copy（不要覆盖本地独有定制）："
         echo "      diff $conflict_dir/<rel>.mine $conflict_dir/<rel>.theirs"
         echo "      cp $conflict_dir/<rel>.theirs vendor/$skill/<rel>  # 接受上游"
+    elif [ ${#conflicts[@]} -gt 0 ]; then
+        log_warn "[$skill] ${#conflicts[@]} 个冲突未覆盖（--no-backup：mine/theirs 未留存，见上方清单）"
     fi
 
-    # 更新 VERSION.md 的 last_verified
-    local version_md="$VENDOR_VERSION_DIR/${skill}-VERSION.md"
-    if [ -f "$version_md" ]; then
-        local today
-        today=$(date +%Y-%m-%d)
+    # 更新 VERSION.md 的 vendored_commit / vendored_from / last_verified（R04 §5）
+    # 主目标是 vendored 副本（与漂移内容同在）；vendor-version/ 镜像存在则同步。
+    # vendored_commit：fetch 走 tarball，无上游 commit SHA，脚本无法可靠写入 → 提示人工核实，不盲写。
+    local today version_md
+    today=$(date +%Y-%m-%d)
+    local info2 repo2
+    info2=$(parse_version_md "$skill" 2>/dev/null) || info2=""
+    IFS='|' read -r repo2 _ _ _ _ <<< "$info2"
+    local repo_short2
+    repo_short2=$(echo "$repo2" | sed -E 's|https?://github.com/||')
+    local vendored_from="${repo_short2:-unknown}@${today}"
+    for version_md in "$VENDOR_DIR/$skill/VERSION.md" "$VENDOR_VERSION_DIR/${skill}-VERSION.md"; do
+        [ -f "$version_md" ] || continue
         if grep -q '`last_verified`' "$version_md"; then
             sed -i.bak -E "s/(\`last_verified\` \| \`).*(\`)/\1${today}\2/" "$version_md" && rm -f "${version_md}.bak"
-            log_ok "[$skill] VERSION.md last_verified → $today"
         fi
-    fi
+        if grep -q '`vendored_from`' "$version_md"; then
+            sed -i.bak -E "s#(\`vendored_from\` \| \`)[^\`]*(\`)#\1${vendored_from}\2#" "$version_md" && rm -f "${version_md}.bak"
+        fi
+        log_ok "[$skill] VERSION.md 已更新（last_verified → $today，vendored_from → $vendored_from）：$version_md"
+    done
+    log_info "[$skill] vendored_commit 需人工核实为本次同步的上游 commit（tarball 抓取无 SHA）"
 
     # 清理 staging（apply 完成）
     rm -rf "$staging"
@@ -479,26 +500,32 @@ apply_one() {
 
     echo ""
     log_ok "[$skill] apply 完成 → $vendored"
+    # 契约：有冲突 → 1，由调用方感知需人工介入（见 apply --help）
+    [ ${#conflicts[@]} -gt 0 ] && return 1 || return 0
 }
 
 cmd_apply() {
     local dry_run=true
+    local no_backup=false
     local target=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --write|--no-dry-run) dry_run=false ;;
             --dry-run)            dry_run=true ;;
+            --no-backup)          no_backup=true ;;
             --all)                target="--all" ;;
             --help|-h)
                 cat <<EOF
-用法: bash vendor_sync.sh apply [--all | <skill>] [--write]
+用法: bash vendor_sync.sh apply [--all | <skill>] [--write] [--no-backup]
 
 选项:
   (无)         单 skill 模式，需指定 skill 名
   --all        全部已注册 skill 顺序 apply
   --dry-run    默认，仅展示计划不写文件（默认开）
   --write      真执行：备份原 vendored 到 .vendor_backup/<skill>.<ts>/，
-               覆盖非冲突文件，更新 VERSION.md，清理 staging
+               覆盖非冲突文件，更新 VERSION.md（vendored_commit/
+               vendored_from/last_verified），清理 staging
+  --no-backup  跳过备份（不推荐）
   --help       本帮助
 
 返回值:
@@ -516,22 +543,26 @@ EOF
         return 2
     fi
 
-    local ok=0 fail=0
+    local ok=0 fail=0 conflicts=0
     if [ "$target" = "--all" ]; then
-        log_info "apply --all (5 skills, dry_run=$dry_run)"
-        local skill
+        log_info "apply --all (5 skills, dry_run=$dry_run, no_backup=$no_backup)"
+        local skill rc
         for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
-            if apply_one "$skill" "$dry_run"; then
+            rc=0
+            apply_one "$skill" "$dry_run" "$no_backup" || rc=$?
+            if [ $rc -eq 0 ]; then
                 ok=$((ok+1))
             else
                 fail=$((fail+1))
+                [ $rc -eq 1 ] && conflicts=$((conflicts+1))
             fi
         done
         echo ""
-        log_info "apply 完成: ok=$ok fail=$fail"
+        log_info "apply 完成: ok=$ok fail=$fail conflicts=$conflicts"
+        [ $conflicts -gt 0 ] && return 1
         [ $fail -gt 0 ] && return 1 || return 0
     else
-        apply_one "$target" "$dry_run"
+        apply_one "$target" "$dry_run" "$no_backup"
     fi
 }
 

@@ -11,16 +11,20 @@
 ```
 xtgc-forge-patches/
 ├── README.md                       ← 本文件
+├── R04-vendor-sync-mvp.md          ← R04 交付报告（含 R05 apply 设计）
 ├── VERSION-TEMPLATE.md             ← 通用 schema（5 子 skill 复用）
+├── scripts/
+│   └── vendor_sync.sh              ← vendor 漂移防御主脚本（R04 4 子命令 + R05 apply）
 ├── vendor-version/                 ← 5 个 vendor 子 skill 的 VERSION.md
+│   ├── VERSION-TEMPLATE.md
 │   ├── bilingual-paper-reader-VERSION.md
 │   ├── literature-matrix-builder-VERSION.md
 │   ├── causal-inference-architect-VERSION.md
 │   ├── research-method-selector-VERSION.md
 │   └── academic-humanizer-VERSION.md
 └── check-ready-probe/
-    ├── check-ready.sh.diff         ← 给 check-ready.sh 加 --probe flag 的 patch
-    └── README.md                   ← 怎么 apply diff
+    ├── vendor-freshness-check.sh   ← R03 漂移探针（vendor_sync.sh check 复用）
+    └── README.md                   ← 探针说明
 ```
 
 ---
@@ -72,8 +76,8 @@ CHANGELOG 草稿（你润色）：
 
 1. **没改任何 xtgc-forge-clone/ 下的文件** —— 100% 在 patches/ 里
 2. **没替你 git commit / push** —— 由你审过后执行
-3. **没写 vendor_sync.sh** —— R02 方案 E 的第 3 步（工程量 3 天），下次再干
-4. **没做 4 维 schema 升级（→ vendored_at + upstream_version 联动）** —— 留待 R04
+3. ~~**没写 vendor_sync.sh**~~ —— 已于 R04 落地（`scripts/vendor_sync.sh`，4 子命令），apply（3-way merge）由 R05 补齐（见 `R04-vendor-sync-mvp.md` §5）
+4. **没做 4 维 schema 升级（→ vendored_at + upstream_version 联动）** —— 留待后续
 
 ---
 

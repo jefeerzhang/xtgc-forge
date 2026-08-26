@@ -86,7 +86,7 @@ def _candidate(label, decision, t_score, tier, **overrides):
     return c
 
 
-def _baseline_json(tmp_name="topic_scores.json"):
+def _baseline_json():
     candidates = [
         _candidate("甲", "selected", 0.40, "innovative"),
         _candidate("乙", "selected", 0.60, "safe"),
