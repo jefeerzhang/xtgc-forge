@@ -100,14 +100,14 @@ R04 `check` 子命令直接复用 R03 `check-ready-probe/vendor-freshness-check.
 ## 5. R05 待办（apply 子命令 = 3-way merge）
 
 ```
-scripts/vendor_sync.sh apply <skill>          # 把 staging 写回 vendor/（生成 .vendor_backup/）
+scripts/vendor_sync.sh apply <skill>          # 把 staging 写回 vendor/（默认自动备份至 .vendor_backup/<skill>.<ts>/）
 scripts/vendor_sync.sh apply --all
-scripts/vendor_sync.sh apply <skill> --no-backup  # 跳过备份（不推荐）
+scripts/vendor_sync.sh apply <skill> --no-backup  # 显式跳过备份（非默认选项，不推荐）
 ```
 
 要点：
 - 3-way merge：base=vendored, mine=vendored+本地补丁, theirs=staging
-- 任何写操作前必须 `.vendor_backup/<skill>.<timestamp>/`
+- 默认安全备份策略：任何写操作执行前，默认自动将原 vendored 目录完整备份至 `.vendor_backup/<skill>.<timestamp>/`；仅在显式传入 `--no-backup` 时才跳过备份
 - 冲突文件 → stdout 列出，由人工决定
 - 更新 VERSION.md 的 `vendored_commit` / `vendored_from` / `last_verified`
 
