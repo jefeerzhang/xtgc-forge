@@ -10,7 +10,7 @@
 #   5. **可独立运行** —— 不强制依赖 R03 的 probe helper，但默认复用
 #
 # 范围（MVP）：
-#   list    列出 5 个 vendor 子 skill 的 VERSION.md 状态
+#   list    列出各 vendor 子 skill 的 VERSION.md 状态
 #   check   探测上游最新 commit（委托 R03 的 vendor-freshness-check.sh）
 #   fetch   拉上游 tarball 到 .vendor_staging/<skill>/
 #   diff    diff vendored vs .vendor_staging/<skill>
@@ -59,6 +59,19 @@ log_ok()   { printf "${GRN}✅${NC}  %s\n" "$*"; }
 log_warn() { printf "${YLW}⚠${NC}  %s\n" "$*"; }
 log_err()  { printf "${RED}❌${NC}  %s\n" "$*" >&2; }
 
+# === 已注册 vendor 子 skill 名单（唯一来源）===
+# 从 vendor/ 子目录自动派生，四个子命令共用；
+# 新增子 skill = vendor/ 下加目录，无需改本脚本。
+# 位置必须在 log_* 定义之后（空名单分支要用 log_warn）
+VENDOR_SKILLS=()
+for _skill_dir in "$VENDOR_DIR"/*/; do
+    [ -d "$_skill_dir" ] || continue
+    VENDOR_SKILLS+=("$(basename "$_skill_dir")")
+done
+if [ ${#VENDOR_SKILLS[@]} -eq 0 ]; then
+    log_warn "未在 $VENDOR_DIR 下发现任何 vendor 子 skill 目录"
+fi
+
 # === VERSION.md 解析（提取 4 个字段）===
 parse_version_md() {
     local skill="$1"
@@ -84,7 +97,7 @@ cmd_list() {
     printf "  %-32s %-10s %-12s %s\n" "SKILL" "AGE" "STATUS" "UPSTREAM"
     printf "  %-32s %-10s %-12s %s\n" "----" "---" "------" "--------"
     local total=0 missing=0 present=0
-    for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
+    for skill in "${VENDOR_SKILLS[@]}"; do
         total=$((total+1))
         local info age_str status_str upstream_short
         info=$(parse_version_md "$skill" 2>/dev/null) || true
@@ -211,9 +224,9 @@ cmd_fetch() {
     local target="${1:---all}"
     mkdir -p "$STAGING_DIR"
     if [ "$target" = "--all" ]; then
-        log_info "fetch --all (5 skills)"
+        log_info "fetch --all (${#VENDOR_SKILLS[@]} skills)"
         local ok=0 fail=0
-        for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
+        for skill in "${VENDOR_SKILLS[@]}"; do
             if fetch_one "$skill"; then
                 ok=$((ok+1))
             else
@@ -305,9 +318,9 @@ cmd_diff() {
         return 1
     fi
     if [ "$target" = "--all" ]; then
-        log_info "diff --all (5 skills)"
+        log_info "diff --all (${#VENDOR_SKILLS[@]} skills)"
         local ok=0 fail=0
-        for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
+        for skill in "${VENDOR_SKILLS[@]}"; do
             if diff_one "$skill"; then
                 ok=$((ok+1))
             else
@@ -545,9 +558,9 @@ EOF
 
     local ok=0 fail=0 conflicts=0
     if [ "$target" = "--all" ]; then
-        log_info "apply --all (5 skills, dry_run=$dry_run, no_backup=$no_backup)"
+        log_info "apply --all (${#VENDOR_SKILLS[@]} skills, dry_run=$dry_run, no_backup=$no_backup)"
         local skill rc
-        for skill in bilingual-paper-reader literature-matrix-builder causal-inference-architect research-method-selector academic-humanizer; do
+        for skill in "${VENDOR_SKILLS[@]}"; do
             rc=0
             apply_one "$skill" "$dry_run" "$no_backup" || rc=$?
             if [ $rc -eq 0 ]; then
