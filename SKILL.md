@@ -12,11 +12,11 @@ description: |
   research question from literature、hypothesis from review、lit-driven、
   开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
   从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
-version: "0.3.21"
+version: "0.3.22"
 license: MIT
 ---
 
-# 选题工坊 v0.3.21
+# 选题工坊 v0.3.22
 
 ## 📊 流水线一览(图)
 
@@ -799,6 +799,7 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 > **当前金样例缺省状态(2026-08-23 现状)**:`examples/漂绿治理-绿贷与环境税组合/process/` 仅缺 `Step2a-points.md`(读 PDF 提要点,用户无 PDF 时本就不产出);`Step5-identification-strategy.md` 已于 v0.3.18 后生成(描述性/质性研究路径亦可产出),不再属于"有意缺省"。v0.3.18 条目中"金样例只剩 Step2a/5 两项有意缺省"系发布日状态,此为后续补充。
 
+- **v0.3.22**(2026-08-26):**模板契约深化:`templates` 深 module,模板与其占位符拦截规则同址**。新增 `scripts/templates.py` 作为「产物长什么样」的单一真源:14 个 init 模板字面量迁入,占位符拦截模式从模板文本自动派生(19 token,空白放宽匹配,HTML 注释不参与);`init_project.py` 只剩写盘与参数替换,`check_step.py` 手写占位正则改为消费派生结果(通用闸规则与家族关键词兜底保留且解耦标注);新增契约不变式测试(模板占位必被拦截),s2 端到端键保留,测试 80→87。
 - **v0.3.21**(2026-08-26):**文档解析深化:三套章节切分合并为 `md_doc` 深 module(标题树模型)**。章节切分语义此前散在 check_step.py 三处各自实现,边界 bug 反复在此爆发;本次新增 `scripts/md_doc.py` 作为切分语义唯一来源(解析一次、边界统一「同级或更高级」、附录标题优先+文本标记回退),删除 `_extract_section`/`_strip_md_structure` 及其未用的 `next_headings` 参数;下划线直测迁移到新 interface,拦截行为不变,测试 64→80。
 - **v0.3.20**(2026-08-24):**审计驱动稳健性收口(17 项缺陷 + 测试 38→64)**。两个并行只读审计 agent 深读三个脚本,产出 17 个全部经临时脚本验证的 bug 候选,按四批落地(每批先写会红的测试再修)。①编码稳健性:三脚本入口 `_force_utf8_stdio()`(GBK 管道下 emoji 崩溃致 PASS 也 exit 1)+ `_read_text_utf8()` 非 UTF-8 产物友好报错;②校验器误报四连:verdict 取最后一次声明 / interaction-log 原话剥占位标记判定 / 闸门编号 `\b`→`(?!\d)`(「CP#1已确认」可匹配)/ 附录豁免改标题行正则;③init 参数生效化:`--name/--branch/--language` 占位符落进模板(原为空操作),拒绝提示去重、回显路径加引号、review.py 错误走 stderr、SKILL.md 文件树对齐实际产物;④低危清扫 + 补测:bool 排除出整数校验、全角 ！句界、`_extract_section` off-by-one + 层级感知、reveals 抄题检测 title 同步 strip、附录 B 截取层级泛化、tier 不一致文案动态生成;新增 `tests/test_gate_units.py` 等四个测试文件,rerun/topic_scores/readability 零覆盖闸函数补直测。明确不修:`_strip_md_structure` 对 `\字母` 行的删除(宽松方向,收益低于回归风险)。
 - **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省)。`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。

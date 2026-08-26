@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "选题工坊 · 社科人文向「用户文献 → 选题 + 假设」流程纪律产品",
-    "version": "0.3.21",
+    "version": "0.3.22",
     "license": "MIT"
   },
   "plugins": [
@@ -13,7 +13,7 @@
       "name": "选题工坊",
       "source": "./",
       "description": "社科人文向「用户文献 → 选题 + 假设」流程纪律产品。5 次硬暂停 + 6 道防线（反坍缩 / 反黑箱 / 反黑话 / 去 AI 味 / 贡献类型门 / 对抗压测·9 类攻击清单·可选增强）；不调任何自动检索；vendor-first 自洽可跑（5 个 MIT 子 skill 内置）。",
-      "version": "0.3.21",
+      "version": "0.3.22",
       "keywords": [
         "research",
         "social-science",
