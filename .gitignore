@@ -18,6 +18,7 @@ __pycache__/
 outputs/
 *.log
 *.tmp
+.commitmsg
 
 # 不要把 .env / 凭据提交
 .env
