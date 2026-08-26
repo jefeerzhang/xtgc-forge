@@ -3,6 +3,16 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.21 · 2026-08-26 · 文档解析深化:三套章节切分合并为 `md_doc` 深 module
+
+**主线**:v0.3.20 收口的是「测试全绿,真实环境仍不可靠」,本次收口的是「同一份报告的切分语义散在三处,边界 bug 反复在同一位置爆发」。上一轮七项低危修复全部落在章节切分边界(`_extract_section` off-by-one、层级感知、附录 B 截取层级泛化)——这不是巧合,是三套各自实现的切分(六段按标题候选切 / 附录 A→B 按正则切 / 正文按整合附录正则切)共用了同一个脆弱概念却互不同步。测试直测下划线函数(`_extract_section`、`_strip_md_structure`)则是另一个信号:seam 实际存在,只是没被承认为 interface。
+
+**方案**:新增 `scripts/md_doc.py` 作为切分语义唯一来源(标题树模型):解析一次,分节边界统一为「同级或更高级标题」,深层同名小节不截断;三个切分调用点变成对树的查询(`section_text` 取六段正文 / `appendix_range` 取附录范围 / `body_before` 取正文);`strip_structure` 一并收入。`check_step.py` 删除 `_extract_section` 与 `_strip_md_structure`,顺带消灭从未真正起作用的 `next_headings` 参数。
+
+**语义契约**:拦截行为不变。附录范围查询标题优先、文本标记回退(沿用历史正则语义),不给无 # 前缀附录标题的既有报告形态制造新误报——与仓库「只消除误报、不放松拦截」的方向一致。直测下划线的用例迁移到 `md_doc` interface,行为级用例(64 个)原样保留作回归锚。
+
+**影响范围**:`scripts/check_step.py` 判定路径重构(1075→992 行);新增 `scripts/md_doc.py`(153 行)与 `tests/test_md_doc.py`(16 用例);术语登记入仓库根 `CONTEXT.md`。测试 64 → 80。
+
 ## v0.3.20 · 2026-08-24 · 审计驱动稳健性收口(17 项缺陷 + 测试 38 → 64)
 
 **主线**:v0.3.19 收口的是「规范说一套,代码做另一套」,本次收口的是「测试全绿,真实环境仍不可靠」。两个并行只读审计 agent 深读三个脚本,产出 17 个全部经临时脚本验证的 bug 候选 + 一批覆盖缺口。最刺眼的事实:全套测试强制 `PYTHONIOENCODING=utf-8`,恰好把「Windows 管道默认 GBK 时 `print("✅")` 抛 UnicodeEncodeError、通过的报告也 exit 1」这条必踩路径完全遮蔽;`init_project.py --name/--branch/--language` 要替换的占位符在模板里根本不存在,是空操作,而 SKILL.md 还在教用户传;四个核心闸函数(`check_interaction_log` / `check_rerun_record` / `check_topic_scores` / `check_readability`)零直测,golden 只走 happy path。修复按四批落地,每批先写会红的测试再修,独立 commit。

@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+import md_doc  # 文档解析深 module:切分语义唯一来源(标题树/附录范围/正文/散文提取)
+
 
 # === 模块常量(闸门阈值 / 可读性边界)===
 # 反坍缩:至少 1 个主推 t_score ≤ 此值,防止 3 主推全落安全层
@@ -200,46 +202,6 @@ def _count_cjk_and_alnum(text: str) -> int:
     return len(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]", text))
 
 
-def _extract_section(content: str, heading_substr: str, next_headings: list[str]) -> str:
-    """按标题子串截取章节正文,直到下一个一级/二级标题候选。"""
-    # 找含 heading_substr 的 markdown 标题行
-    lines = content.splitlines()
-    start = None
-    for i, line in enumerate(lines):
-        if line.lstrip().startswith("#") and heading_substr in line:
-            start = i + 1
-            break
-    if start is None:
-        return ""
-    end = len(lines)
-    for j in range(start, len(lines)):
-        line = lines[j]
-        if not line.lstrip().startswith("#"):
-            continue
-        # 遇到其他六段标题或附录标题则停
-        for nh in next_headings:
-            if nh in line and heading_substr not in line:
-                # 与下方通用边界一致:只有同级或更高级的标题才算分节边界,
-                # 深层同名小节(如上级章节内的 ### 同名小节)不得提前截断
-                level = len(line) - len(line.lstrip("#"))
-                start_line = lines[start - 1]
-                start_level = len(start_line) - len(start_line.lstrip("#"))
-                if level <= start_level:
-                    end = j
-                    return "\n".join(lines[start:end])
-        # 任何级别的标题都视为潜在分节边界(从 # 到 ######),
-        # 然后用 level <= start_level 判定是否真属于「同级或更高级」。
-        # 这样 ## 下的 ### 不会被忽略,### 段也能正确切分。
-        if re.match(r"^#{1,6}\s+", line) and j >= start:
-            level = len(line) - len(line.lstrip("#"))
-            start_line = lines[start - 1]
-            start_level = len(start_line) - len(start_line.lstrip("#"))
-            if level <= start_level and heading_substr not in line:
-                end = j
-                break
-    return "\n".join(lines[start:end])
-
-
 def _count_paragraphs(section: str) -> int:
     """非空段落数(空行分隔,且不是纯表格行/纯标题)。"""
     chunks = re.split(r"\n\s*\n", section.strip())
@@ -265,11 +227,8 @@ def _count_matrix_data_rows(content: str) -> int:
     优先:附录 A 区域内 | L1 | / | L2 | 或首列像文献 ID 的表行;
     回退:全文 markdown 表中非表头、非分隔行。
     """
-    # 截取附录 A
-    appendix = content
-    m = re.search(r"附录\s*A[^\n]*\n([\s\S]*?)(?=\n#{1,6}\s*附录\s*B|\Z)", content)
-    if m:
-        appendix = m.group(1)
+    # 截取附录 A(标题优先、文本标记回退,语义集中在 md_doc)
+    appendix = md_doc.appendix_range(content, "A") or content
 
     rows = 0
     for line in appendix.splitlines():
@@ -354,10 +313,8 @@ def check_step6_quality(content: str) -> list[str]:
         ("为什么能写出这样的假设", 400, 2),
         ("后面应该怎么做", 300, 2),
     ]
-    next_heads = [h for h, _, _ in six] + ["附录 A", "附录 B", "整合附录"]
-
     for heading, min_chars, min_paras in six:
-        sec = _extract_section(content, heading, next_heads)
+        sec = md_doc.section_text(content, heading)
         if not sec.strip():
             errors.append(f"Step6: 未能解析章节「{heading}」正文")
             continue
@@ -516,53 +473,14 @@ BODY_JARGON = [
     r"(?:[\(（]\s*探索性\s*[\)）])",
 ]
 
-def _strip_md_structure(text: str) -> str:
-    """剥离 markdown 结构行(标题/表格/代码块/公式块/分隔线/列表标记/引用标记),只留真散文。"""
-    lines = text.splitlines()
-    out = []
-    in_code = False
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("```"):
-            in_code = not in_code
-            continue
-        if in_code:
-            continue
-        if re.match(r"^#{1,6}\s", stripped):  # 标题
-            continue
-        if re.match(r"^---+\s*$", stripped):  # 分隔线
-            continue
-        if stripped.startswith("|"):  # 表格行
-            continue
-        if stripped.startswith("\\[") or stripped.startswith("\\]"):  # LaTeX 公式块
-            continue
-        if re.search(r"\\[a-zA-Z]+", stripped):  # LaTeX 公式内容行(如 \beta1 GC{it}...)
-            continue
-        if stripped.startswith(">"):  # 引用:去标记保留内容
-            out.append(re.sub(r"^>\s?", "", line))
-            continue
-        # 列表行:去列表标记,保留内容
-        out.append(re.sub(r"^([-*]\s|\d+\.\s)", "", stripped))
-    joined = "\n".join(out)
-    # 去行内 markdown 符号,避免断句闸句长虚高。
-    # * 与 ` 无条件剥离:中文强调常紧贴汉字(如「**重点**」),两侧无空白,
-    # 边界判定会漏剥,残留的 * 会计入句长;_ 见下行规则(保留 snake_case)。
-    joined = re.sub(r"[`*]", "", joined)
-    # _ 只剥「不夹在两个单词字符中间」的:snake_case 的 _ 两侧都是 [A-Za-z0-9] 保留;
-    # _斜体_ / 行首 _ 这类挨着空白或汉字的标记剥离。
-    return re.sub(r"(?<![A-Za-z0-9])_+|_+(?![A-Za-z0-9])", " ", joined)
-
-
 def check_readability(content: str) -> list[str]:
     """可读性闸门:正文(开头→整合附录标题前)反黑话 + 断句。附录为技术对照区,豁免。
 
-    附录标题按 markdown 标题行识别(任意层级/可带序号/空格可选),
+    正文边界由 md_doc 按标题树定位(任意层级/可带序号/空格可选),
     如「# 整合附录」「## 三、整合附录」「#整合附录」均豁免。
     """
     errors = []
-    m = re.search(r"^#{1,6}\s*[^\n]*整合附录", content, re.MULTILINE)
-    idx = m.start() if m else -1
-    body = content if idx == -1 else content[:idx]
+    body = md_doc.body_before(content, "整合附录")
 
     # 1. 黑话禁止
     for pat in BODY_JARGON:
@@ -573,8 +491,8 @@ def check_readability(content: str) -> list[str]:
                 "主报告是给读者/导师看的,须按 delivery-spec §3.3 术语翻译表改成人话;编号只在附录 C 对照"
             )
 
-    # 2. 断句(超长句)——逐行测句长,避免跨行合并(标题+段/引用块+列表/公式拼成一坨)
-    prose = _strip_md_structure(body)
+    # 2. 断句(超长句)——逐行测句长,避免跨行合并(标题+段/引用块+列表/公式拼成一坡)
+    prose = md_doc.strip_structure(body)
     long_sentences = []
     for line in prose.splitlines():
         line = line.strip()

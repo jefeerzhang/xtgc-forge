@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-"""s4 修复验证:_extract_section 把 ### 等更深级标题也视为分节边界。
+"""s4 修复验证:章节切分把 ### 等更深级标题也正确处理。
 
 原实现 `r"^#{1,2}\\s+"` 只看 # / ##,### 段被吞进 ## 的内容里,导致 Step 6
 六段长度/段数校验把子标题也算成「论述段落」或漏算。换为 `r"^#{1,6}\\s+"`
 后,## 起、### 收的子段能被正确切出。
+
+v0.3.21:切分语义集中到 md_doc(标题树模型),本文件从直测
+check_step._extract_section 迁移为打 md_doc.section_text 的 interface。
 """
-import check_step  # type: ignore
+import md_doc  # type: ignore
 
 
 def test_extract_section_h2_keeps_deeper_h3_subsections():
@@ -29,7 +32,7 @@ def test_extract_section_h2_keeps_deeper_h3_subsections():
 
 下一段。
 """
-    sec = check_step._extract_section(md, "选的题是什么", ["为什么选这个题"])
+    sec = md_doc.section_text(md, "选的题是什么")
     assert "子标题 A 下的一段" in sec, f"### 子段应归入 ## 节:\n{sec}"
     assert "子标题 B 下的一段" in sec
     assert "下一段" not in sec, f"下一个 ## 之后应被切掉:\n{sec}"
@@ -56,7 +59,7 @@ B 下的一段。
 
 下一段。
 """
-    sec2 = check_step._extract_section(md2, "选的题是什么", ["为什么选这个题"])
+    sec2 = md_doc.section_text(md2, "选的题是什么")
     assert "### 子标题 A" not in sec2, (
         f"### 后的内容应被切掉,实际:\n{sec2}"
     )
@@ -77,7 +80,7 @@ def test_extract_section_h2_under_h1_still_stops_at_h2():
 ## 2. 为什么选这个题?
 下一段。
 """
-    sec = check_step._extract_section(md, "选的题是什么", ["为什么选这个题"])
+    sec = md_doc.section_text(md, "选的题是什么")
     assert "段落一" in sec
     assert "段落二" in sec
     assert "下一段" not in sec

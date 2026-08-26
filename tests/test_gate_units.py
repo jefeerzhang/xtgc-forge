@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 
 import check_step
+import md_doc  # type: ignore
 
 
 def _td():
@@ -150,12 +151,12 @@ def test_exclamation_adjacent_long_sentence_still_caught():
     assert any("超过" in e for e in errors), f"无句界超长文本应被抓;errors={errors}"
 
 
-# ---------- _extract_section 边界 ----------
+# ---------- section 边界(打 md_doc interface) ----------
 
 def test_extract_section_adjacent_heading_bounds_section():
     """紧贴标题行下方(无空行)的同级标题应作分节边界(off-by-one 回归)。"""
     content = "# 第一段\n# 第二段\n第二段的正文内容。\n"
-    sec = check_step._extract_section(content, "第一段", ["第二段"])
+    sec = md_doc.section_text(content, "第一段")
     assert "第二段" not in sec, f"同级相邻标题应截断本节;got={sec!r}"
 
 
@@ -168,7 +169,7 @@ def test_extract_section_deep_same_name_subsection_not_boundary():
         "# 第二章\n"
         "第二章正式正文。\n"
     )
-    sec = check_step._extract_section(content, "第一章", ["第二章"])
+    sec = md_doc.section_text(content, "第一章")
     assert "第一章的正文内容继续展开" in sec, f"深层同名小节不应提前截断;got={sec!r}"
     assert "第二章正式正文" not in sec
 
