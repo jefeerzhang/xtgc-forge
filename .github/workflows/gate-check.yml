@@ -58,10 +58,12 @@ PY
       - name: 全量 pytest 单元与契约测试
         run: python -m pytest -q
 
-      - name: 供应链 vendor 状态检查(vendor_sync.sh list)
+      - name: 供应链 vendor 状态检查(list + offline check)
         run: |
           bash -n scripts/vendor_sync.sh
+          bash -n check-ready-probe/vendor-freshness-check.sh
           bash scripts/vendor_sync.sh list
+          XTGC_OFFLINE=1 bash scripts/vendor_sync.sh check
 
       - name: 模板占位符冒烟(未填充模板必须被拦)
         run: |

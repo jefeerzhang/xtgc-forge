@@ -24,7 +24,7 @@ elif [ -d "${SCRIPT_DIR}/../xtgc-forge-clone/vendor" ]; then
 elif [ -d "${SCRIPT_DIR}/../../xtgc-forge-clone/vendor" ]; then
     XTGC_ROOT="$(cd "${SCRIPT_DIR}/../../xtgc-forge-clone" && pwd)"
 else
-    XTGC_ROOT="$SCRIPT_DIR"
+    XTGC_ROOT="$(cd "$(dirname "$SCRIPT_DIR")" && pwd)"
 fi
 VENDOR_DIR="$XTGC_ROOT/vendor"
 
@@ -54,7 +54,7 @@ results_human=""
 for skill in "${SKILLS[@]}"; do
     version_file="$VENDOR_DIR/$skill/VERSION.md"
     if [ ! -f "$version_file" ]; then
-        results_human+="  ⚠️  $skill: VERSION.md 不存在(请先 cp xtgc-forge-patches/vendor-version/$skill-VERSION.md vendor/$skill/VERSION.md)
+        results_human+="  ⚠️  $skill: VERSION.md 不存在(请参考现有 vendor 子目录中的 VERSION.md 补充)
 "
         [ $first -eq 0 ] && results_json+=","
         results_json+="{\"skill\":\"$skill\",\"status\":\"missing_version_md\"}"
