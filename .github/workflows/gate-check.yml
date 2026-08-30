@@ -36,15 +36,15 @@ jobs:
           echo "$out"
           echo "----------------------------------------"
           python - "$out" <<'PY'
-import sys, re
-out = sys.argv[1]
-fail = [ln for ln in out.splitlines() if re.match(r'^\s{2}- ', ln)]
-assert len(fail) == 2, f"预期恰好 2 个失败条目,实际 {len(fail)}:\n{out}"
-joined = "\n".join(fail)
-assert "[step 2a]" in joined and "[step 5]" in joined, joined
-assert not re.search(r'review_(scan|topics)', joined), f"review 不应出现在失败条目:\n{joined}"
-print("✅ --step all 失败数=2(仅 Step2a/5,review 已降级为过程建议)")
-PY
+          import sys, re
+          out = sys.argv[1]
+          fail = [ln for ln in out.splitlines() if re.match(r'^\s{2}- ', ln)]
+          assert len(fail) == 2, f"预期恰好 2 个失败条目,实际 {len(fail)}:\n{out}"
+          joined = "\n".join(fail)
+          assert "[step 2a]" in joined and "[step 5]" in joined, joined
+          assert not re.search(r'review_(scan|topics)', joined), f"review 不应出现在失败条目:\n{joined}"
+          print("✅ --step all 失败数=2(仅 Step2a/5,review 已降级为过程建议)")
+          PY
 
       - name: 全量 pytest 单元与契约测试
         run: python -m pytest -q
@@ -61,12 +61,12 @@ PY
           tmp=$(mktemp -d)
           python scripts/init_project.py --workdir "$tmp" --name "冒烟测试" --branch "推断性" >/dev/null 2>&1 || true
           python - "$tmp" <<'EOF'
-import sys, pathlib
-sys.path.insert(0, "scripts")
-import check_step
-root = sys.argv[1]
-c = pathlib.Path(root).joinpath("Step2c-gap-verdicts.md").read_text(encoding="utf-8")
-errs = check_step.check_placeholders(c, "smoke")
-assert errs, "未填充模板应当命中占位符闸门"
-print("✅ 未填充模板被占位符闸门拦截")
-EOF
+          import sys, pathlib
+          sys.path.insert(0, "scripts")
+          import check_step
+          root = sys.argv[1]
+          c = pathlib.Path(root).joinpath("Step2c-gap-verdicts.md").read_text(encoding="utf-8")
+          errs = check_step.check_placeholders(c, "smoke")
+          assert errs, "未填充模板应当命中占位符闸门"
+          print("✅ 未填充模板被占位符闸门拦截")
+          EOF
