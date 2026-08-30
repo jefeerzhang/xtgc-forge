@@ -46,15 +46,6 @@ assert not re.search(r'review_(scan|topics)', joined), f"review 不应出现在�
 print("✅ --step all 失败数=2(仅 Step2a/5,review 已降级为过程建议)")
 PY
 
-      - name: 版本对账(单源一致:SKILL/README/CHANGELOG/发布通道)
-        run: python -m pytest tests/test_version_reconciliation.py -q
-
-      - name: 占位符 / review 三态单元测试
-        run: python -m pytest tests/test_placeholders.py tests/test_review_states.py -q
-
-      - name: 金样例集成断言(--step 6 PASS + --step all == 2)
-        run: python -m pytest tests/test_golden_step_all.py -q
-
       - name: 全量 pytest 单元与契约测试
         run: python -m pytest -q
 
