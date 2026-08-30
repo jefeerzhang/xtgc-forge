@@ -305,31 +305,7 @@ MIT（可商用、可改编）。
 
 ## 版本
 
-- **v0.3.22**(2026-08-26):**模板契约深化:`templates` 深 module,模板与其占位符拦截规则同址**。14 个模板字面量迁入 `scripts/templates.py`,占位拦截模式从模板文本自动派生;契约不变式测试锚定「模板占位必被拦截」,测试 80→87。
-- **v0.3.21**(2026-08-26):**文档解析深化:三套章节切分合并为 `md_doc` 深 module(标题树模型)**。切分语义单一来源(解析一次、边界统一「同级或更高级」、附录标题优先+文本标记回退),删除 `_extract_section`/`_strip_md_structure`,拦截行为不变,测试 64→80。
-- **v0.3.20**(2026-08-24):**审计驱动稳健性收口 17 项 + 测试 38→64**。两个并行只读审计 agent 深读三个脚本,17 个 bug 候选全部经临时脚本验证后分四批落地(每批先红后绿、独立 commit):①编码稳健性 —— Windows 管道默认 GBK 时 `print("✅")` 崩溃致 PASS 也 exit 1、init 在 14 个文件写盘完成后崩溃,三脚本入口新增 `_force_utf8_stdio()`;非 UTF-8 产物文件给「转存」提示而非裸 traceback;②校验器误报四连 —— verdict 取最后一次声明(历史轮次转述不再压过最终结论)、interaction-log 原话含 `<` 不再整条丢弃、「CP#1已确认」紧贴汉字可匹配、附录标题带序号/无空格变体均豁免黑话检查;③`--name/--branch/--language` 从空操作变真正生效(占位符落进模板),SKILL.md 文件树对齐实际产物(14 个 init 模板 + 过程产物标注),错误统一走 stderr,回显命令路径加引号;④低危清扫(topic_scores bool 通过整数检查、全角 ！句界、`_extract_section` off-by-one 与层级感知、tier 不一致文案自相矛盾等)+ `check_rerun_record`/`check_topic_scores`/`check_readability` 零覆盖函数直测。
-- **v0.3.19**(2026-08-23):**三轮 code review 收口 51 项**(技能规范 / Python 脚本 / 黄金样例三项并行审计)。9 项阻塞(Checkpoint #5 流程图对齐、`verdict` 中文贪婪正则、`init_project.py` 静默覆盖、`--workdir ~` 解析、v0.2.X 变更日志去重、L281「用户决策」歧义、黄金样例 Step3b 2→9 类对抗压测、恢复 Step5 独立文件、vendor 子 skill 接线)+ 21 项重要(规范 9 项补 复跑/grill-me/T-Score/确认定义/对抗压测 opt-in 等;脚本 8 项补 is_dir / 锚定正则 / step-all 去重 / h3 提取 / 矩阵行检测 / 标签去重 / is_empty 正则 / tier 超界)+ 21 项轻微(规范 13 项+脚本 8 项);`scripts/check_step.py` 拆分为 4 个 per-step rule 函数 + 字典调度;`magic numbers` 提为模块常量;测试 17 → 33 passed。
-- **v0.3.18**(2026-08-23):**独立审查降级为过程建议 + 版本对账(诚实化运动)**。把「独立审查」从不可绕过刚性闸门降级为「强烈推荐的过程建议」;`check_step.py` `check_review()` 改为 status 三态(PASS/WARN/FAIL),verdict 值扩到 {PASS, P0_OPEN, FAIL, NEEDS_HUMAN};review 缺失/警告只写 stderr、不阻塞 `--step all`(金样例只剩 Step2a/5 两项有意缺省);`check-ready.sh` 加跨文件版本对账(SKILL.md ↔ README badge ↔ CHANGELOG ↔ 发布通道 marketplace.json)与 CHANGELOG 同版本重复检测;`check_step.py` 版本号改为从 SKILL.md frontmatter 动态读取。
-- **v0.3.17**(2026-08-13):**审稿反馈闭环 + 发布通道归档**。对 v0.3.16 跑双轴 `code-review`,收口 4 处遗留 + 归档发布通道。①`process/Step1-input.md:3` 旧路径 `outputs/漂绿与金融市场风险` → `process/`(v0.3.16 §4 字面承诺闭合);②`marketplace.json` description 把「9 类对抗压测」改成「对抗压测·9 类攻击清单·可选增强」,防线口径与 SKILL.md 对齐;③占位符正则从 1 字起步(`<[一-鿿][^>]*>`)收紧为 4 字起步 + 关键词白名单兜底,过滤合法正文 `<文献>`/`<用户>`/`<什么>`/`<中文>` 误报;④`marketplace.json` 字段全合规但 v0.3.16 漏归档,本次显式记入。`--step all` 失败项数与 v0.3.16 持平(4 项 = Step2a/5/review 有意缺省),Step 6 主报告闸仍 PASS。
-- **v0.3.16**（2026-08-13）：**金样例可复验性加固**。占位符闸门补漏（新增通用 `<中文>` 占位模式，原枚举 3 个漏掉 init 模板 20+ 个）；清除金样例 3 处 `<用户文献目录>` 占位残留；`check_step.py` 支持 `process/` 子目录回退，金样例过程文件 Step1/2b/2c/3a/3b/4 + topic_scores 全部可复验（`--step all` 失败项 12 → 4，仅缺省 Step2a/5/review）；金样例 README 断链修复（`outputs/漂绿与金融市场风险/` → `process/`）。
-- **v0.3.15**（2026-08-13）：**内置 academic-humanizer（jefeerzhang fork）**。把 Step 6 去 AI 味润色从「可选外部依赖」升级为「仓库自带 vendor/ 副本」；`vendor/academic-humanizer/` 镜像 jefeerzhang fork，包含上游 AIScientists-Dev 的英文规则 + fork 增量添加的中文规则层 `references/rules-zh.md` 与 `examples/before-after-zh-academic.md`；LICENSE 放子目录（`vendor/academic-humanizer/LICENSE`，MIT Copyright 2026 AIScientists-Dev）；`NOTICE.md` 新增独立段声明上游 + 上游之上游（`blader/humanizer` / `koaeraser/ARMS`）三方 attribution；`check-ready.sh` 加 vendor probe，头部 `[1/5]→[1/6]`；无 transitive deps（无 Python / 无 pip）；`references/deai-checklist.md` 同步降级为 humanizer 兜底。
-- **v0.3.14**（2026-08-13）：**内置 4 个 Nero1688 子 skill**（`vendor/<name>/` drop-in，MIT）。把「可选外部依赖」换成仓库自带副本，首次 `git clone` 即自洽可跑，无需额外 clone Nero1688 上游；`check-ready.sh` 改为 vendor-first 探测，`CLAUDE_SKILLS_DIR` 仍作外置覆盖口；MIT 合规：`vendor/LICENSE` + `NOTICE.md` 双重声明；`.gitignore` 增 `Nero1688/`。SKILL.md 4 处引用、依赖块、致谢、`assets/comparison.md` 第 43 行同步更新；`scripts/check_step.py` 等闸门脚本不改动（原本就不调用 sub-skill）。
-- **v0.3.13**（2026-08-13）：**Step 4 三层假设闸（结论 → 金句 → 最险假设）**。假设提炼前先过三关：结论优先测试（先写理想结论，套话式「X 与 Y 相关」= 影响不足）、单句金句（一句话洞见，能当摘要首句）、最险假设 + 1-2 周可测（单一最可能杀死选题的假设 + mini 验证路径）。check_step Step 4 强制含「三层假设闸」；借鉴 Carlini 结论优先测试 + researcher-pack（MIT）RS2/RS3/RS4。
-- **v0.3.12**（2026-08-13）：**主题对抗压测升级为 9 类坍缩攻击 + 四档生存标签**。魔鬼代言人按经管语境翻译的 9 类攻击清单（换情境 / 换术语 / 识别 / 已被占 / 不可证伪 / 范围过宽 / 数据质量 / 不可行 / 贡献类型）逐类攻击选定主题并给回应，打 `存活 / 需收窄 / 需转向 / 坍缩` 生存标签；check_step 3b 校验升级；借鉴 zhangjunhuan846-hash 8 类坍缩攻击理念（经管化改写，不复制原文）。
-- **v0.3.11**（2026-08-13）：**去 AI 味固定环节**。Step 6 强制润色：已装 `academic-humanizer-zh`（MIT）则调用它，未装按 `references/deai-checklist.md` 六大病灶自查；顺序铁律「先翻译（反黑话）后润色（去 AI 味）」；只动文风，数字 / 引文 / 术语一字不改。
-- **v0.3.10**（2026-08-13）：**复跑契约收紧**。附录 F 决策表不再是复跑授权；复跑授权必须由 `00_复跑决策记录.md`（当次原话 + 时间）提供；声明复跑却无记录 / 空壳记录 → `check_step --step 6` FAIL；复跑仍须 interaction-log 5 闸留痕。
-- **v0.3.9**（2026-08-13）：**交互留痕（5 闸的证据）**。新增 `interaction-log.md`：每闸确认后追加一行（含用户原话，禁止代填）；`check_step --step 6 / all` 强制 5 闸各有确认，缺任一闸 → FAIL，禁止未交互交付。
-- **v0.3.8**（2026-08-13）：**可读性层（反黑话）**。主报告正文禁内部黑话（GAP/Checkpoint/SESOI/t_score 等，按 delivery-spec §3.3 翻译表改成人话）+ 超长句闸门（>100 字 FAIL）；金样例正文 10 处黑话全翻译。可选：装 `academic-humanizer-zh`（MIT）做文风润色，先翻译后润色。
-- **v0.3.7**（2026-08-13）：**贡献类型门 + 威胁文献清单**。每个候选必答「揭示了什么」（3a + topic_scores 双校验，禁与标题雷同）；附录 C 强制「威胁文献清单」段（分级 + 本题靠什么活下来 + 诚实标注）；delivery-spec §3.2 + init 模板同步。
-- **v0.3.6**（2026-08-13）：**主题对抗压测（可选增强）**。魔鬼代言人对选定主题出 2-3 条「最可能被审稿人拒的理由」+ 回应，写入 Step3b「对抗压测」小节；check_step 3b 半强校验；借鉴 research-companion 7 维压测 + MultiAgent-Research-Ideator 实证（深迭代优于并行批判者）。
-- **v0.3.5**（2026-08-13）：**反黑箱交付**。主报告附录 C 强制加「Gap 判定方法」段（五类判定规则 + 证据链要件 + 真实推理链示例）；`check_step --step 6` 校验「Gap 判定方法」+「证据链」；规格见 delivery-spec §3.1。
-- **v0.3.4**（2026-08-13）：**反坍缩机制**。Step 3a 强制三阶段（模态识别 → 分层替代 → 闸门校验）；topic_scores.json 加 `t_score` / `tier`；新增 `references/anti-collapse.md`。
-- **v0.3.3**（2026-08-11）：**鲁班三刀**。`check_step` Step6 加固；金样例 `examples/漂绿治理-绿贷与环境税组合/`；delivery-spec 外置；依赖改可选；Step5 不强制 IV。
-- **v0.3.2**（2026-08-11）：**交付纪律全局化**。主报告 = 正文六段 + 文内矩阵 / 要点 / Gap / 候选 / 识别；论述须充分；Step2a 允许文字层抽取（非 OCR）。
-- **v0.3.1**（2026-08-11）：**六段式研究计划报告定型**。Step 6 主产品改为 `00_研究计划报告.md`；Step1–5 降为过程附录；先亮题再论证。
-- **v0.3.0**（2026-08-10）：**精雕，可视化 + 传播资产**。README 首屏徽章 / 流程图 / 触发词云；新增 CHANGELOG.md / assets/diagram/ / assets/comparison.md。
-- **v0.2.9**（2026-08-10）：**强制 5 次 Checkpoint 硬暂停**。禁止代选 / 合并跳过 / 用 check_step 代替用户确认。
-- **v0.2.0–v0.2.8**：8 个边界拷问决策、模块化命令、gap 派生规则、实测驱动修复、topic_scores 6 维评分、独立审查分离、P1 复现性等，详见 [CHANGELOG.md](CHANGELOG.md)。
+完整版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 致谢
 
