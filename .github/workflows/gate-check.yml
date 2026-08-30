@@ -30,7 +30,7 @@ jobs:
             python scripts/check_step.py --workdir "examples/漂绿治理-绿贷与环境税组合" --step "$s"
           done
 
-      - name: 金样例 --step all(预期 FAIL:恰好 2 项,仅 Step2a/5,review 不应列为失败)
+      - name: 金样例 --step all(预期 FAIL:恰好 1 项,仅 Step2a,review 不应列为失败)
         run: |
           out="$(python scripts/check_step.py --workdir "examples/漂绿治理-绿贷与环境税组合" --step all 2>&1 || true)"
           echo "$out"
@@ -39,11 +39,11 @@ jobs:
           import sys, re
           out = sys.argv[1]
           fail = [ln for ln in out.splitlines() if re.match(r'^\s{2}- ', ln)]
-          assert len(fail) == 2, f"预期恰好 2 个失败条目,实际 {len(fail)}:\n{out}"
+          assert len(fail) == 1, f"预期恰好 1 个失败条目,实际 {len(fail)}:\n{out}"
           joined = "\n".join(fail)
-          assert "[step 2a]" in joined and "[step 5]" in joined, joined
+          assert "[step 2a]" in joined and "[step 5]" not in joined, joined
           assert not re.search(r'review_(scan|topics)', joined), f"review 不应出现在失败条目:\n{joined}"
-          print("✅ --step all 失败数=2(仅 Step2a/5,review 已降级为过程建议)")
+          print("✅ --step all 失败数=1(仅 Step2a,review 已降级为过程建议)")
           PY
 
       - name: 全量 pytest 单元与契约测试
