@@ -221,6 +221,11 @@ def _count_paragraphs(section: str) -> int:
     return n
 
 
+def _is_table_separator(s: str) -> bool:
+    """markdown 表格分隔行(| --- | --- | 等)。"""
+    return bool(re.match(r"^\|?\s*:?-+:?\s*\|", s.strip()))
+
+
 def _count_matrix_data_rows(content: str) -> int:
     """
     统计文献矩阵数据行。
@@ -229,14 +234,20 @@ def _count_matrix_data_rows(content: str) -> int:
     """
     # 截取附录 A(标题优先、文本标记回退,语义集中在 md_doc)
     appendix = md_doc.appendix_range(content, "A") or content
+    lines = appendix.splitlines()
 
     rows = 0
-    for line in appendix.splitlines():
+    for i, line in enumerate(lines):
         s = line.strip()
         # Markdown 表格行:首尾必须是 |
         if not s.startswith("|") or not s.endswith("|"):
             continue
-        if re.match(r"^\|?\s*:?-+:?\s*\|", s):
+        if _is_table_separator(s):
+            continue
+        # markdown 表头行恒是其下紧跟的分隔行:该行是表头,不是文献数据行。
+        # (首列常见「序号/文献编号/文献标识」等表头不在下方白名单内,不靠白名单判定。)
+        nxt = lines[i + 1].strip() if i + 1 < len(lines) else ""
+        if _is_table_separator(nxt):
             continue
         # 数据行:含 L1/L2… 或至少 5 个单元格
         cells = [c.strip() for c in s.strip("|").split("|")]

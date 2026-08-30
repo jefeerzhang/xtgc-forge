@@ -151,6 +151,36 @@ def test_exclamation_adjacent_long_sentence_still_caught():
     assert any("超过" in e for e in errors), f"无句界超长文本应被抓;errors={errors}"
 
 
+def test_inline_latex_does_not_drop_long_sentence():
+    """断句闸不得因行内含内联 LaTeX 命令/反斜杠路径就整行丢弃(回归)。
+
+    根因:strip_structure 用 re.search(r"\\[a-zA-Z]+", ...) 扫描整行,
+    任何「行内出现反斜杠+字母」的正文(内联 $\\beta$、Windows 路径 C:\\Users\\...)
+    都被误判为公式块行而整行跳过,导致超长句逃过断句闸(误放行)。
+    修复后必须仍抓到 140+ 字的超长句。"""
+    long_base = "无句界连续长文" * 20  # 140 字,无任何句读,单独即触发断句闸
+    # 控制:无反斜杠必须被抓(守卫,防把断句闸放空)
+    assert any("超过" in e for e in check_step.check_readability(long_base + "\n"))
+    # 内联 LaTeX 命令 + Windows 反斜杠路径:同一长度仍应被抓,不得因含反斜杠而漏报
+    for suffix in (r" 含内联公式 \beta_1 = 0.5", r" 路径 C:\Users\jefeer\repo"):
+        errors = check_step.check_readability(long_base + suffix + "\n")
+        assert any("超过" in e for e in errors), f"含反斜杠的超长句应被抓;errors={errors}"
+
+
+def test_matrix_header_col_not_counted_as_data():
+    """附录 A 矩阵表头首列是「序号/文献编号/文献标识」等常见中文表头时,不得把表头当数据行。
+
+    根因:_count_matrix_data_rows 的表头白名单只有 {ID, 编号, —, -} 及全行「作者+年份」,
+    首列为「序号」「文献编号」等表头会被误当成文献数据行,导致 <5 行也判 PASS(误放行)。
+    修复后 4 行文献矩阵必须判「数据行 < 5」。"""
+    header = "| 序号 | 文献 | 期刊 | 方法 | 主要发现 | 关联 |"
+    sep = "|---|---|---|---|---|---|"
+    rows = [f"| 文献{i} | 202{i} | J{i} | DID | 发现 | 关联 |" for i in range(4)]
+    content = "# 报告\n## 附录 A\n" + header + "\n" + sep + "\n" + "\n".join(rows) + "\n"
+    errors = check_step.check_step6_quality(content)
+    assert any("数据行" in e for e in errors), f"4 行矩阵(序号表头)应判 <5;errors={errors}"
+
+
 # ---------- section 边界(打 md_doc interface) ----------
 
 def test_extract_section_adjacent_heading_bounds_section():

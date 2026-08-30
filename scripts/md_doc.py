@@ -136,7 +136,10 @@ def strip_structure(text: str) -> str:
             continue
         if stripped.startswith("\\[") or stripped.startswith("\\]"):  # LaTeX 公式块
             continue
-        if re.search(r"\\[a-zA-Z]+", stripped):  # LaTeX 公式内容行（如 \beta1 GC{it}...）
+        # 公式内容行:行内含反斜杠命令、且无中文字符(纯符号/数学式,如
+        # `GW {it}=\beta_1 GC {it}+...`)→ 判为公式,剥掉。行内有中文即正文句子,
+        # 即使夹了内联 \beta 或 Windows 路径(C:\Users\...),也保留参与断句检查。
+        if re.search(r"\\[a-zA-Z]+", stripped) and not re.search(r"[\u4e00-\u9fff]", stripped):
             continue
         if stripped.startswith(">"):  # 引用：去标记保留内容
             out.append(re.sub(r"^>\s?", "", line))
