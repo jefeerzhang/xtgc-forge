@@ -50,6 +50,32 @@ TRACKED_FILES = (
 )
 
 
+def _tracked_hits(workdir: Path) -> list[tuple[str, Path]]:
+    """已存在的 TRACKED 文件（根目录优先，否则 process/）。
+
+    与 check_step._resolve_workdir_file 同一查找顺序：金样例把 Step*
+    放在 process/，只扫根目录会漏掉，init 会在根目录写下空模板把真产物盖住。
+    """
+    hits: list[tuple[str, Path]] = []
+    for name in TRACKED_FILES:
+        root = workdir / name
+        proc = workdir / "process" / name
+        if root.exists():
+            hits.append((name, root))
+        elif proc.exists():
+            hits.append((name, proc))
+    return hits
+
+
+def _write_path(workdir: Path, filename: str) -> Path:
+    """已有 process/ 副本且根目录没有 → 写回 process/，避免根目录空模板抢闸门。"""
+    root = workdir / filename
+    proc = workdir / "process" / filename
+    if proc.exists() and not root.exists():
+        return proc
+    return root
+
+
 def init_project(workdir: str, name: str, branch: str, language: str, force: bool = False):
     """初始化研究项目目录。
 
@@ -62,18 +88,19 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
     if workdir_path.exists():
         # 检查是否已有任意已跟踪文件(v0.3.x 起扩到 TRACKED_FILES 全集,
         # 不只 00_任务元信息.md,防静默覆盖用户已写内容)。
-        existing = [f for f in TRACKED_FILES if (workdir_path / f).exists()]
+        existing = _tracked_hits(workdir_path)
         if existing:
             if not force:
                 print(f"❌ 工作目录已存在项目文件:{workdir_path}", file=sys.stderr)
-                print(f"  命中 {len(existing)} 个已跟踪文件:{', '.join(existing[:5])}"
+                shown = [str(p.relative_to(workdir_path)) for _, p in existing[:5]]
+                print(f"  命中 {len(existing)} 个已跟踪文件:{', '.join(shown)}"
                       + ("…" if len(existing) > 5 else ""), file=sys.stderr)
                 print("需 --force 覆盖,或换 --workdir", file=sys.stderr)
                 sys.exit(1)
             print(f"⚠️  --force 已启用,以下 {len(existing)} 个文件将被覆盖:",
                   file=sys.stderr)
-            for f in existing:
-                print(f"  - {f}", file=sys.stderr)
+            for _name, path in existing:
+                print(f"  - {path.relative_to(workdir_path)}", file=sys.stderr)
 
     # 创建目录前,确保 --workdir 不是已存在的文件(否则 mkdir 会抛 FileExistsError,
     # 且语义上「对文件路径做 init」是用户错误,应显式拒绝)。
@@ -96,7 +123,7 @@ def init_project(workdir: str, name: str, branch: str, language: str, force: boo
     assert set(fill_values) == set(FILL_TOKENS), "fill_values 与 FILL_TOKENS 契约不一致"
     created = []
     for filename, content in TEMPLATES.items():
-        file_path = workdir_path / filename
+        file_path = _write_path(workdir_path, filename)
         content_filled = content
         for tok, val in fill_values.items():
             content_filled = content_filled.replace(tok, val)

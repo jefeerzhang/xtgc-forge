@@ -3,6 +3,27 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.23 · 2026-08-31 · 闸门绕过与供应链 3-way 收口
+
+**主线**:近 20 次提交把切分收进 `md_doc`、把同步收进 `vendor_sync.sh` 之后,审查发现两处闸门可被合规外观的 Markdown 骗过,以及 `apply` 把 `HEAD` 当 merge-base 会覆盖已提交的本地补丁。本版只消除这些误放行/数据丢失,不放松拦截。
+
+**文档解析**:
+- 标题树跳过 fenced code 与 4 空格缩进代码块,Python/Stata 的 `# 整合附录` 不再把后续正文划进附录豁免区
+- `appendix_range` 在同级/更高级标题与下一附录字母之间取较早者,附录 A 不再吞掉「参考文献」里的表（矩阵行数误放行）
+- 散文提取只剥纯公式行；英文句子夹 `\\cite` 仍参与断句闸
+
+**供应链**:
+- `vendor_sync.sh` / probe 的 `XTGC_ROOT` 只认环境变量或脚本上一级,不再用 `pwd` 或 `xtgc-forge-clone`
+- `apply` 的 3-way base 改为 `VERSION.md` 的 `vendored_commit`（须为本仓 git 对象）；比不过或无 base 时标冲突,不覆盖。比较走 `cmp`（二进制不去 CR）
+- probe 从 `vendor/` 派生名单、读 `upstream_repo` 再 `ls-remote`；本仓同步点 SHA 不再拿去对上游 HEAD 误报 DRIFT。`academic-humanizer` 的 `upstream_skill_path` 改为反引号包裹的 `.`
+
+**契约对齐**:
+- `init_project.py` 把 `process/` 纳入覆盖保护：已有过程文件时拒绝静默写根目录空模板；`--force` 写回 `process/` 原位
+- Step 6 关键词闸与质量闸补上「附录 F」，与模板 / CONTEXT 的整合附录 A–F 对齐
+- 气候风险金样例接入 `gate-check.yml` 与 pytest（step 6 / `--step all` 必须 PASS）
+
+**影响范围**:`scripts/md_doc.py`、`scripts/vendor_sync.sh`、`scripts/init_project.py`、`scripts/check_step.py`、`check-ready-probe/vendor-freshness-check.sh`、`.github/workflows/gate-check.yml`、`vendor/academic-humanizer/VERSION.md`、`CONTEXT.md`。回归测试补 fence / 附录截断 / 英文 cite / process/ init / 附录 F / 气候风险金样例。
+
 ## v0.3.22 · 2026-08-26 · 模板契约深化:`templates` 深 module,模板与其占位符拦截规则同址
 
 **主线**:v0.3.21 收口的是「切分语义散在三处」,本次收口的是「模板长什么样散在两个 module」。init 内嵌 410 行模板字面量,check 用手写正则反向描述同一批占位符,注释自认「全部来自 init 生成的模板」却无任何机制保证——s2 事故(模板文本「请填写或修改」误触闸门)就是契约断裂的实证,此后只靠兜底测试事后抓。v0.3.17 的白名单正则更是漂移活化石:它引用的 token(<Gap 编号>/<研究类型 标签>/<填这里>)在当前模板里已不存在。

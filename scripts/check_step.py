@@ -160,6 +160,7 @@ GATES = {
             "附录 C",
             "附录 D",
             "附录 E",
+            "附录 F",
         ],
         "fail_msg": "Step 6: 缺少 00_研究计划报告.md,或未按六段+整合附录框架撰写。附录 C 须含「Gap 判定方法」段(反黑箱)+「威胁文献清单」段,见 delivery-spec §3.1",
     },
@@ -299,7 +300,7 @@ def check_step6_quality(content: str) -> list[str]:
     errors.extend(check_placeholders(content, "main"))
 
     # 附录标题
-    for app in ["附录 A", "附录 B", "附录 C", "附录 D", "附录 E"]:
+    for app in ["附录 A", "附录 B", "附录 C", "附录 D", "附录 E", "附录 F"]:
         if app not in content:
             errors.append(f"Step6: 缺少整合附录标题「{app}」")
 

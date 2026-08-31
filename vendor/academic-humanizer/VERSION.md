@@ -11,8 +11,8 @@
 | `vendored_name` | `academic-humanizer` |
 | `vendored_path` | `vendor/academic-humanizer/` |
 | `upstream_repo` | `https://github.com/AIScientists-Dev/academic-humanizer`（fork 之母）|
-| `upstream_skill_path` | 仓库根（mono-skill，非 mono-repo）|
-| 🔄 `vendored_commit` | `6356e27`（xtgc-forge: feat(vendor): 自带 5 个子 skill, v0.3.15）|
+| `upstream_skill_path` | `.` |
+| 🔄 `vendored_commit` | `6356e27` |
 | 🔄 `vendored_from` | `AIScientists-Dev/academic-humanizer@version 0.3.3`（来自 vendored SKILL.md `version` 字段）|
 | 🔄 `vendored_skill_version` | `0.3.3`（SKILL.md 头部声明）|
 | `vendored_license` | `MIT`（见 `vendor/academic-humanizer/LICENSE` + `NOTICE.md`）|

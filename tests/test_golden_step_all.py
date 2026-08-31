@@ -49,3 +49,31 @@ def test_golden_review_now_warn_not_fail():
     for step in ("scan-review", "topics-review"):
         r = _run(step)
         assert r.returncode == 0, f"{step} 应因软警告通过\n{r.stdout}{r.stderr}"
+
+
+CLIMATE = ROOT / "examples" / "气候风险传导与企业策略性应对"
+
+
+def _run_climate(step):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--workdir", str(CLIMATE), "--step", step],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=SUBPROCESS_ENV,
+    )
+
+
+def test_climate_golden_step6_passes():
+    r = _run_climate("6")
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_climate_golden_step_all_passes():
+    r = _run_climate("all")
+    out = r.stdout + r.stderr
+    fail = [ln for ln in out.splitlines() if ln.startswith("  - ")]
+    assert r.returncode == 0, out
+    assert fail == [], f"气候风险金样例 --step all 应 PASS,实际失败:\n{out}"

@@ -4,9 +4,9 @@
 把原先散在 check_step.py 的三套章节切分语义合并到一处：
 
 - 标题树：解析一次；分节边界统一为「同级或更高级标题」，
-  深层同名小节不截断；
+  深层同名小节不截断；fenced / 缩进代码块内的 # 不进入标题树；
 - 切分查询：取某节正文（六段）、取附录范围（标题优先、
-  文本标记回退，避免对无 # 前缀的报告形态产生新误报）、
+  同级截断 + 下一附录字母取较早者；文本标记回退）、
   取正文（整合附录标题之前）；
 - 散文提取：剥离 markdown 结构行与行内标记，只留可断句的真散文。
 
@@ -19,8 +19,11 @@ import re
 from dataclasses import dataclass
 
 # # 后允许零空白（兼容「#整合附录」写法，与历史闸门语义一致）；
-# lstrip 后以 # 开头即视为标题行（兼容缩进标题）。
+# CommonMark：标题最多缩进 3 空格；4 空格起是代码块，不是标题。
 _HEADING_RE = re.compile(r"^(#{1,6})\s*(.*)$")
+_LATEX_CMD_RE = re.compile(r"\\[a-zA-Z]+")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+_LATIN_WORD_RE = re.compile(r"[A-Za-z]{3,}")
 
 
 @dataclass(frozen=True)
@@ -32,10 +35,26 @@ class Heading:
 
 
 def headings(content: str) -> list[Heading]:
-    """解析标题树。边界语义：同级或更高级的标题才算分节边界。"""
+    """解析标题树。边界语义：同级或更高级的标题才算分节边界。
+
+    fenced code（```）与 4 空格缩进代码块内的行不进入标题树，
+    避免 Python/Stata 注释「# 整合附录」把正文切进附录豁免区。
+    """
     lines = content.splitlines()
     raw: list[tuple[int, int, str]] = []  # (line_idx, level, text)
+    in_fence = False
     for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if line.startswith("\t"):
+            continue
+        space_indent = len(line) - len(line.lstrip(" "))
+        if space_indent >= 4:
+            continue
         m = _HEADING_RE.match(line.lstrip())
         if not m:
             continue
@@ -78,11 +97,15 @@ def section_text(content: str, heading_substr: str) -> str:
 
 
 def appendix_range(content: str, letter: str) -> str:
-    """取「附录 <letter>」的范围，直到下一个附录标题或文尾。
+    """取「附录 <letter>」的范围。
 
-    标题优先：按标题树定位（任意层级）。
-    回退：附录标题未写成 markdown 标题时，沿用历史正则的文本标记匹配，
-    保证既有能过的报告形态不被新误报拦截。
+    标题优先：按标题树定位（任意层级）。终点取较早者：
+    - 该标题的同级或更高级边界（Heading.end）
+    - 其后第一个「附录 <下一字母>」标题
+    这样「参考文献」等同级非附录标题不会被吞进附录 A，避免矩阵误计。
+
+    回退：附录标题未写成 markdown 标题时，文本标记匹配；
+    截断认下一附录字母标题，或任意 h1/h2（视为同级边界）。
     """
     next_letter = chr(ord(letter) + 1)
     lines = content.splitlines()
@@ -93,15 +116,16 @@ def appendix_range(content: str, letter: str) -> str:
             start_h = h
             break
     if start_h is not None:
-        end = len(lines)
+        end = start_h.end
         for h in tree:
             if h.start > start_h.start and re.search(rf"附录\s*{next_letter}", h.text):
-                end = h.start
+                if h.start < end:
+                    end = h.start
                 break
         return "\n".join(lines[start_h.start + 1:end])
 
     m = re.search(
-        rf"附录\s*{letter}[^\n]*\n([\s\S]*?)(?=\n#{{1,6}}\s*附录\s*{next_letter}|\Z)",
+        rf"附录\s*{letter}[^\n]*\n([\s\S]*?)(?=\n#{{1,6}}\s*附录\s*{next_letter}|\n#{{1,2}}\s|\Z)",
         content,
     )
     return m.group(1) if m else ""
@@ -114,6 +138,21 @@ def body_before(content: str, heading_substr: str) -> str:
         if heading_substr in h.text:
             return "\n".join(content.splitlines()[:h.start])
     return content
+
+
+def _is_pure_formula_line(stripped: str) -> bool:
+    """整行是公式/符号，不是夹了 LaTeX 的散文。
+
+    有反斜杠命令、无汉字、去掉命令后剩余拉丁词 < 3 个 → 公式行。
+    「This ... \\cite{x} ...」这类英文句会留下足够单词，不剥。
+    """
+    if not _LATEX_CMD_RE.search(stripped):
+        return False
+    if _CJK_RE.search(stripped):
+        return False
+    rest = _LATEX_CMD_RE.sub(" ", stripped)
+    rest = re.sub(r"[{}\\^_&=+0-9.,;:()\[\]\-]", " ", rest)
+    return len(_LATIN_WORD_RE.findall(rest)) < 3
 
 
 def strip_structure(text: str) -> str:
@@ -136,10 +175,9 @@ def strip_structure(text: str) -> str:
             continue
         if stripped.startswith("\\[") or stripped.startswith("\\]"):  # LaTeX 公式块
             continue
-        # 公式内容行:行内含反斜杠命令、且无中文字符(纯符号/数学式,如
-        # `GW {it}=\beta_1 GC {it}+...`)→ 判为公式,剥掉。行内有中文即正文句子,
-        # 即使夹了内联 \beta 或 Windows 路径(C:\Users\...),也保留参与断句检查。
-        if re.search(r"\\[a-zA-Z]+", stripped) and not re.search(r"[\u4e00-\u9fff]", stripped):
+        # 纯公式行才整行丢弃（回归方程、无散文单词）。
+        # 中文正文、英文句子夹 \cite / \beta、Windows 路径均保留，交给断句闸。
+        if _is_pure_formula_line(stripped):
             continue
         if stripped.startswith(">"):  # 引用：去标记保留内容
             out.append(re.sub(r"^>\s?", "", line))

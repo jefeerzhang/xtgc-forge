@@ -46,6 +46,12 @@ jobs:
           print("✅ --step all 失败数=1(仅 Step2a,review 已降级为过程建议)")
           PY
 
+      - name: 气候风险金样例主报告闸(必须 PASS)
+        run: python scripts/check_step.py --workdir "examples/气候风险传导与企业策略性应对" --step 6
+
+      - name: 气候风险金样例 --step all(必须 PASS)
+        run: python scripts/check_step.py --workdir "examples/气候风险传导与企业策略性应对" --step all
+
       - name: 全量 pytest 单元与契约测试
         run: python -m pytest -q
 

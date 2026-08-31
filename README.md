@@ -26,7 +26,7 @@
 > 完整 Before 标本见 [`examples/气候风险传导与企业策略性应对/BEFORE_NAIVE_AI_SAMPLE.md`](examples/气候风险传导与企业策略性应对/BEFORE_NAIVE_AI_SAMPLE.md)。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version: v0.3.22](https://img.shields.io/badge/Version-v0.3.22-blue)](CHANGELOG.md)
+[![Version: v0.3.23](https://img.shields.io/badge/Version-v0.3.23-blue)](CHANGELOG.md)
 [![Checkpoints: 5 hard stops](https://img.shields.io/badge/Checkpoints-5%20hard%20stops-red)](SKILL.md#-强制-5-次-checkpoint硬规则v029)
 [![Vendored: 5 sub-skills (MIT)](https://img.shields.io/badge/Vendored-5%20sub--skills%20(MIT)-success)](vendor/)
 [![Anti-Collapse: T-Score](https://img.shields.io/badge/Anti--Collapse-T--Score-blue)](references/anti-collapse.md)

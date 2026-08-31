@@ -27,6 +27,33 @@ def test_headings_end_is_same_or_higher_boundary():
     assert "三。" not in "\n".join(lines[jia.start + 1:jia.end])
 
 
+def test_headings_skip_fenced_code_comments():
+    """fence 内的 # 注释不是标题（Python/Stata 代码块不得切断章节）。"""
+    md = (
+        "# 报告\n"
+        "## 选的题是什么\n"
+        "正文段。\n"
+        "```python\n"
+        "# 这是注释不是标题\n"
+        "x = 1\n"
+        "```\n"
+        "## 为什么选这个题\n"
+        "下一段。\n"
+    )
+    tree = md_doc.headings(md)
+    assert [h.text for h in tree] == ["报告", "选的题是什么", "为什么选这个题"]
+    sec = md_doc.section_text(md, "选的题是什么")
+    assert "正文段。" in sec
+    assert "下一段" not in sec
+
+
+def test_headings_skip_four_space_indented_code():
+    """CommonMark 4 空格缩进代码块里的 # 不是标题。"""
+    md = "# 报告\n    # 缩进注释\n## 下一节\n"
+    tree = md_doc.headings(md)
+    assert [h.text for h in tree] == ["报告", "下一节"]
+
+
 # ---------- section_text（原 _extract_section 语义）----------
 
 def test_section_h2_keeps_deeper_h3_subsections():
@@ -110,6 +137,36 @@ def test_appendix_range_to_eof_when_no_next():
     assert "行一。" in rng and "行二。" in rng
 
 
+def test_appendix_range_stops_at_same_level_non_appendix():
+    """附录 A 在同级「参考文献」处截断，不得吞掉后续表格（矩阵误计回归）。"""
+    md = (
+        "# 报告\n"
+        "## 附录 A 文献矩阵\n"
+        "| L1 | x |\n"
+        "## 参考文献\n"
+        "| L9 | 不该算进附录 A |\n"
+        "## 附录 B 编号\n"
+        "对照。\n"
+    )
+    rng = md_doc.appendix_range(md, "A")
+    assert "| L1 | x |" in rng
+    assert "L9" not in rng
+    assert "对照。" not in rng
+
+
+def test_appendix_range_fallback_stops_at_h2():
+    """无 # 前缀的附录 A，回退时在同级 h1/h2 处停，不只认附录 B。"""
+    md = (
+        "# 报告\n正文。\n"
+        "附录 A 文献矩阵\n| L1 | x |\n"
+        "## 参考文献\n| L9 | y |\n"
+        "## 附录 B 编号\n对照。\n"
+    )
+    rng = md_doc.appendix_range(md, "A")
+    assert "| L1 | x |" in rng
+    assert "L9" not in rng
+
+
 # ---------- body_before（正文 = 整合附录标题前）----------
 
 def test_body_before_integration_appendix():
@@ -121,6 +178,24 @@ def test_body_before_integration_appendix():
 def test_body_before_missing_returns_full():
     md = "# 报告\n只有正文。\n"
     assert md_doc.body_before(md, "整合附录") == md
+
+
+def test_body_before_ignores_fence_fake_appendix():
+    """代码块里的「# 整合附录」不得把后续正文划进豁免区。"""
+    md = (
+        "# 报告\n开场。\n"
+        "```python\n"
+        "# 整合附录\n"
+        "x = 1\n"
+        "```\n"
+        "无句界连续长文无句界连续长文。\n"
+        "## 整合附录\n"
+        "附录内容。\n"
+    )
+    body = md_doc.body_before(md, "整合附录")
+    assert "开场。" in body
+    assert "无句界连续长文" in body
+    assert "附录内容。" not in body
 
 
 # ---------- strip_structure（原 _strip_md_structure 语义）----------
@@ -146,3 +221,22 @@ def test_structure_lines_removed():
     out = md_doc.strip_structure(md)
     assert "标题" not in out and "code" not in out and "a | b" not in out
     assert "列表项" in out and "引用文" in out
+
+
+def test_english_cite_line_kept_for_sentence_gate():
+    """含 \\cite 的英文句子是散文，不是公式行。"""
+    line = (
+        "This identification strategy uses \\cite{smith2020} and continues without "
+        "any period so the sentence stays far longer than one hundred characters"
+    )
+    out = md_doc.strip_structure(line)
+    assert "identification" in out
+    assert "smith2020" in out
+
+
+def test_pure_equation_line_still_stripped():
+    """纯符号回归方程仍按公式行剥离（金样例回归方程无中文）。"""
+    line = r"Y_{it} = \beta_1 X_{it} + \epsilon_{it}"
+    out = md_doc.strip_structure(line)
+    assert "beta" not in out.lower()
+    assert "X_{it}" not in out

@@ -16,15 +16,12 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# XTGC_ROOT 优先级：环境变量 > 同级目录的 xtgc-forge-clone > 上跳 1 级 > 上跳 2 级
+# XTGC_ROOT：环境变量（且其下有 vendor/）> 本脚本上一级（仓库根）
+# 不探测 xtgc-forge-clone，避免写到旁边另一棵树。
 if [ -n "${XTGC_ROOT:-}" ] && [ -d "${XTGC_ROOT}/vendor" ]; then
     : # 用环境变量
-elif [ -d "${SCRIPT_DIR}/../xtgc-forge-clone/vendor" ]; then
-    XTGC_ROOT="$(cd "${SCRIPT_DIR}/../xtgc-forge-clone" && pwd)"
-elif [ -d "${SCRIPT_DIR}/../../xtgc-forge-clone/vendor" ]; then
-    XTGC_ROOT="$(cd "${SCRIPT_DIR}/../../xtgc-forge-clone" && pwd)"
 else
-    XTGC_ROOT="$(cd "$(dirname "$SCRIPT_DIR")" && pwd)"
+    XTGC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 VENDOR_DIR="$XTGC_ROOT/vendor"
 
@@ -44,7 +41,23 @@ for arg in "$@"; do
     esac
 done
 
-SKILLS=("bilingual-paper-reader" "literature-matrix-builder" "research-method-selector" "causal-inference-architect" "academic-humanizer")
+# 已注册 vendor 子 skill：从 vendor/ 子目录派生（与 vendor_sync.sh 同一来源）
+SKILLS=()
+for _skill_dir in "$VENDOR_DIR"/*/; do
+    [ -d "$_skill_dir" ] || continue
+    SKILLS+=("$(basename "$_skill_dir")")
+done
+
+# 两个 SHA 是否同一提交（短针是长针前缀，且至少 7 位）
+_sha_match() {
+    local a="${1,,}" b="${2,,}"
+    [ -z "$a" ] || [ -z "$b" ] && return 1
+    [ "$a" = "$b" ] && return 0
+    [ ${#a} -ge 7 ] && [ ${#b} -ge 7 ] || return 1
+    case "$b" in "$a"*) return 0 ;; esac
+    case "$a" in "$b"*) return 0 ;; esac
+    return 1
+}
 
 # 收集结果
 results_json="["
@@ -63,10 +76,10 @@ for skill in "${SKILLS[@]}"; do
     fi
 
     vendored_commit=$(grep -oE '`vendored_commit`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
-    vendored_from=$(grep -oE '`vendored_from`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
     last_verified=$(grep -oE '`last_verified`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
     refresh_days=$(grep -oE '`refresh_cadence_days`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
     criticality=$(grep -oE '`criticality`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
+    upstream_repo=$(grep -oE '`upstream_repo`\s*\|\s*`[^`]+`' "$version_file" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
 
     # 计算 age
     today=$(date -u +%s)
@@ -79,16 +92,22 @@ for skill in "${SKILLS[@]}"; do
     fetch_status=""
 
     if [ $PROBE -eq 1 ] && [ $PROBE_FORCE_OFFLINE -eq 0 ]; then
-        # 探测上游（用 git ls-remote 拿 HEAD commit）
-        if command -v git >/dev/null 2>&1; then
-            upstream_commit=$(git ls-remote https://github.com/AIScientists-Dev/academic-humanizer HEAD 2>/dev/null | awk '{print $1}' | head -c 7)
-            # Nero1688 仓库是 mono-repo，没有子目录 HEAD；只能探测仓库级 commit
-            if [ "$skill" != "academic-humanizer" ]; then
-                upstream_commit=$(git ls-remote https://github.com/Nero1688/claude-academic-skills HEAD 2>/dev/null | awk '{print $1}' | head -c 7)
-            fi
+        # vendored_commit 若是本仓库 git 对象，那是本地同步标记，不能拿去对上游 HEAD
+        if [ -n "$vendored_commit" ] && git -C "$XTGC_ROOT" cat-file -t "$vendored_commit" >/dev/null 2>&1 \
+            && git -C "$XTGC_ROOT" cat-file -e "${vendored_commit}:vendor/${skill}" >/dev/null 2>&1; then
+            drift_status="local_pin"
+            fetch_status="skipped_local_pin"
+        elif [ -z "$upstream_repo" ]; then
+            drift_status="pin_invalid"
+            fetch_status="missing_upstream_repo"
+        elif command -v git >/dev/null 2>&1; then
+            local_repo="$upstream_repo"
+            # 去掉可能的 .git 后缀
+            local_repo="${local_repo%.git}"
+            upstream_commit=$(git ls-remote "$local_repo" HEAD 2>/dev/null | awk '{print $1}' | head -1)
             if [ -n "$upstream_commit" ]; then
                 fetch_status="ok"
-                if [ "$upstream_commit" != "$vendored_commit" ]; then
+                if ! _sha_match "$upstream_commit" "$vendored_commit"; then
                     drift_status="upstream_moved"
                 fi
             else
@@ -103,6 +122,8 @@ for skill in "${SKILLS[@]}"; do
     status_icon="✅"
     [ $age_days -gt $refresh_days ] && status_icon="⚠️ "
     [ "$drift_status" = "upstream_moved" ] && status_icon="🔄"
+    [ "$drift_status" = "local_pin" ] && status_icon="📌"
+    [ "$drift_status" = "pin_invalid" ] && status_icon="⚠️ "
     [ "$drift_status" = "missing_version_md" ] && status_icon="❌"
 
     results_human+="$status_icon $skill"
@@ -110,6 +131,8 @@ for skill in "${SKILLS[@]}"; do
     results_human+=" | criticality=$criticality"
     [ -n "$upstream_commit" ] && results_human+=" | upstream=$upstream_commit vs vendored=$vendored_commit"
     [ "$drift_status" = "upstream_moved" ] && results_human+=" **DRIFT**"
+    [ "$drift_status" = "local_pin" ] && results_human+=" (vendored_commit 是本仓同步点，未与上游 HEAD 比 SHA)"
+    [ "$drift_status" = "pin_invalid" ] && results_human+=" (缺少 upstream_repo)"
     [ -n "$fetch_status" ] && [ "$fetch_status" != "ok" ] && results_human+=" (probe=$fetch_status)"
     results_human+="
 "

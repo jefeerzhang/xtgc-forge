@@ -73,3 +73,38 @@ def test_delivery_note_alone_triggers_overwrite_protection():
         assert r.returncode == 1, f"仅有 00_交付说明.md 时也应拒绝:\n{r.stdout}{r.stderr}"
         assert "工作目录已存在项目文件" in r.stderr
         assert note.read_text(encoding="utf-8") == "# 用户自己的交付说明\n"
+
+
+def test_process_subdir_triggers_overwrite_protection():
+    """process/ 下已有 Step 产物时,init 不得在根目录写空模板把闸门引向空壳。"""
+    with tempfile.TemporaryDirectory() as d:
+        workdir = Path(d) / "proj"
+        proc = workdir / "process"
+        proc.mkdir(parents=True)
+        step1 = proc / "Step1-input.md"
+        user_content = "# 用户在 process/ 的文献清单\n"
+        step1.write_text(user_content, encoding="utf-8")
+
+        r = _run(str(workdir))
+        assert r.returncode == 1, f"process/ 已有产物时 init 应拒绝:\n{r.stdout}{r.stderr}"
+        assert "工作目录已存在项目文件" in r.stderr
+        assert "process" in r.stderr.replace("\\", "/")
+        assert not (workdir / "Step1-input.md").exists(), "拒绝时不得在根目录写下空模板"
+        assert step1.read_text(encoding="utf-8") == user_content
+
+
+def test_force_overwrites_process_in_place():
+    """--force 应覆盖 process/ 原文件,不在根目录另写一份抢闸门。"""
+    with tempfile.TemporaryDirectory() as d:
+        workdir = Path(d) / "proj"
+        proc = workdir / "process"
+        proc.mkdir(parents=True)
+        step1 = proc / "Step1-input.md"
+        step1.write_text("# 用户在 process/ 的文献清单\n", encoding="utf-8")
+
+        r = _run(str(workdir), "--force")
+        assert r.returncode == 0, f"--force 应允许覆盖 process/:\n{r.stdout}{r.stderr}"
+        assert not (workdir / "Step1-input.md").exists(), "不得在根目录另写一份"
+        overwritten = step1.read_text(encoding="utf-8")
+        assert "用户在 process/" not in overwritten
+        assert "模糊领域" in overwritten or "Step 1" in overwritten

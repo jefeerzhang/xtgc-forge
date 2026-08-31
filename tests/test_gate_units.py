@@ -167,6 +167,50 @@ def test_inline_latex_does_not_drop_long_sentence():
         assert any("超过" in e for e in errors), f"含反斜杠的超长句应被抓;errors={errors}"
 
 
+def test_fence_fake_appendix_does_not_bypass_readability():
+    """代码块内「# 整合附录」不得让后续超长句/黑话逃过可读性闸。"""
+    long_text = "无句界连续长文" * 20
+    content = (
+        "# 报告\n开场。\n"
+        "```python\n"
+        "# 整合附录\n"
+        "x = 1\n"
+        "```\n"
+        f"{long_text}\n"
+        "正文继续写 t_score 与 SESOI。\n"
+    )
+    errors = check_step.check_readability(content)
+    assert any("超过" in e for e in errors), f"fence 后超长句应被抓;errors={errors}"
+    assert any("t_score" in e or "SESOI" in e for e in errors), errors
+
+
+def test_english_cite_long_sentence_still_caught():
+    """英文超长句夹 \\cite 仍须触发断句闸，不得当公式整行丢弃。"""
+    line = (
+        "This identification strategy uses \\cite{smith2020} and continues without "
+        "any period so the sentence stays far longer than one hundred characters "
+        "because we keep writing english prose about the design"
+    )
+    errors = check_step.check_readability(line + "\n")
+    assert any("超过" in e for e in errors), f"英文 \\cite 超长句应被抓;errors={errors}"
+
+
+def test_matrix_does_not_count_rows_after_appendix_a():
+    """附录 A 只有 4 行时，同级「参考文献」里的表行不得凑成 5 行误放行。"""
+    header = "| 序号 | 文献 | 期刊 | 方法 | 主要发现 | 关联 |"
+    sep = "|---|---|---|---|---|---|"
+    rows_a = [f"| 文献{i} | 202{i} | J{i} | DID | 发现 | 关联 |" for i in range(4)]
+    extra = "| 文献9 | 2024 | J9 | DID | 发现 | 关联 |"
+    content = (
+        "# 报告\n## 附录 A\n"
+        + header + "\n" + sep + "\n" + "\n".join(rows_a)
+        + "\n## 参考文献\n"
+        + header + "\n" + sep + "\n" + extra + "\n"
+    )
+    errors = check_step.check_step6_quality(content)
+    assert any("数据行" in e for e in errors), f"4 行附录 A 不得因后续表误放行;errors={errors}"
+
+
 def test_matrix_header_col_not_counted_as_data():
     """附录 A 矩阵表头首列是「序号/文献编号/文献标识」等常见中文表头时,不得把表头当数据行。
 
@@ -179,6 +223,14 @@ def test_matrix_header_col_not_counted_as_data():
     content = "# 报告\n## 附录 A\n" + header + "\n" + sep + "\n" + "\n".join(rows) + "\n"
     errors = check_step.check_step6_quality(content)
     assert any("数据行" in e for e in errors), f"4 行矩阵(序号表头)应判 <5;errors={errors}"
+
+
+def test_step6_requires_appendix_f():
+    """模板与 CONTEXT 把附录 F 算进整合附录,缺 F 不得只靠 A–E 过闸。"""
+    report = Path(__file__).resolve().parent.parent / "examples" / "漂绿治理-绿贷与环境税组合" / "00_研究计划报告.md"
+    content = report.read_text(encoding="utf-8").replace("附录 F", "附录 X")
+    errors = check_step.check_step6_quality(content)
+    assert any("附录 F" in e for e in errors), f"缺附录 F 应被拦;errors={errors}"
 
 
 # ---------- section 边界(打 md_doc interface) ----------

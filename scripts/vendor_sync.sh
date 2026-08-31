@@ -26,16 +26,15 @@
 
 set -e
 
-# === 路径解析（与 R03 一致）===
+# === 路径解析 ===
+# 根目录只认两处：XTGC_ROOT（且其下有 vendor/）或本脚本的上一级。
+# 不用 pwd、不探测 xtgc-forge-clone，避免在 scripts/ 下执行扫空，
+# 或写到旁边另一棵树。
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -n "${XTGC_ROOT:-}" ] && [ -d "${XTGC_ROOT}/vendor" ]; then
     : # 用环境变量
-elif [ -d "${SCRIPT_DIR}/../xtgc-forge-clone/vendor" ]; then
-    XTGC_ROOT="$(cd "${SCRIPT_DIR}/../xtgc-forge-clone" && pwd)"
-elif [ -d "${SCRIPT_DIR}/../../xtgc-forge-clone/vendor" ]; then
-    XTGC_ROOT="$(cd "${SCRIPT_DIR}/../../xtgc-forge-clone" && pwd)"
 else
-    XTGC_ROOT="${XTGC_ROOT:-$(pwd)}"
+    XTGC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 VENDOR_DIR="$XTGC_ROOT/vendor"
 STAGING_DIR="$XTGC_ROOT/.vendor_staging"
@@ -87,6 +86,36 @@ parse_version_md() {
     verified=$(grep -oE '`last_verified`\s*\|\s*`[^`]+`' "$f" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
     branch=$(grep -oE '`upstream_branch`\s*\|\s*`[^`]+`' "$f" | head -1 | sed -E 's/.*`([^`]+)`$/\1/')
     echo "${repo}|${path}|${commit}|${verified}|${branch}"
+}
+
+# 文件是否含 NUL（PNG 等）。含 NUL 则按二进制 cmp，不去 CR。
+_file_has_nul() {
+    local f="$1"
+    [ -f "$f" ] || return 1
+    local orig stripped
+    orig=$(dd if="$f" bs=8192 count=1 2>/dev/null | wc -c)
+    stripped=$(dd if="$f" bs=8192 count=1 2>/dev/null | tr -d '\0' | wc -c)
+    [ "$stripped" -lt "$orig" ]
+}
+
+# 文本忽略 CR 再比；二进制原样 cmp。避免 PNG 读进 bash 被截断。
+_cmp_vendor_files() {
+    local a="$1" b="$2"
+    if _file_has_nul "$a" || _file_has_nul "$b"; then
+        cmp -s "$a" "$b"
+        return $?
+    fi
+    cmp -s <(tr -d '\r' < "$a") <(tr -d '\r' < "$b")
+}
+
+# vendored_commit 若是本仓库 git 对象，可作为 3-way base（上次同步点）。
+# 若是上游 SHA（本仓库没有），git show 失败 → 调用方把 mine!=theirs 标为冲突，不覆盖。
+_local_base_rev() {
+    local commit="$1"
+    [ -n "$commit" ] || return 1
+    [ "$commit" = "unknown" ] && return 1
+    git -C "$XTGC_ROOT" cat-file -t "$commit" >/dev/null 2>&1 || return 1
+    echo "$commit"
 }
 
 # === 子命令：list ===
@@ -335,14 +364,15 @@ cmd_diff() {
     fi
 }
 
-# === apply 核心：3-way merge (base=HEAD, mine=vendored, theirs=staging) ===
+# === apply 核心：3-way merge (base=VERSION.md vendored_commit, mine=vendored, theirs=staging) ===
 # 策略：
 #   - staging 独有     → 上游新增，复制
 #   - vendored 独有    → 本地独有（用户定制？），不删
 #   - 内容相同         → 无需操作
-#   - mine==base       → 本地没改，theirs 赢（接受上游）
+#   - mine==base       → 自 vendored_commit 以来本地没改，theirs 赢（接受上游）
 #   - theirs==base     → 上游没改，mine 赢（保留本地）
-#   - 都不等           → 冲突，列文件不自动 resolve，备份到 .vendor_backup/<skill>.<ts>/conflicts/
+#   - 都不等或无 base  → 冲突，不覆盖（含已提交补丁；base 不是 HEAD）
+# 比较用 cmp（二进制原样；文本去 CR）。不把文件 cat 进 bash 字符串。
 apply_one() {
     local skill="$1"
     local dry_run="${2:-true}"
@@ -360,8 +390,12 @@ apply_one() {
         return 1
     fi
 
-    local base_head=""
-    base_head=$(git -C "$XTGC_ROOT" rev-parse HEAD 2>/dev/null || echo "")
+    local base_rev=""
+    local pin_commit=""
+    local info_pin
+    info_pin=$(parse_version_md "$skill" 2>/dev/null) || info_pin=""
+    IFS='|' read -r _ _ pin_commit _ _ <<< "$info_pin"
+    base_rev=$(_local_base_rev "$pin_commit") || base_rev=""
 
     echo ""
     echo "════════════════════════════════════════════════════════════════════"
@@ -371,15 +405,21 @@ apply_one() {
         log_info "[APPLY] [$skill] 执行 apply"
     fi
     echo "════════════════════════════════════════════════════════════════════"
-    echo "  base   = ${XTGC_ROOT} @ ${base_head:-<no-git>}"
     echo "  mine   = $vendored"
     echo "  theirs = $staging"
+    if [ -n "$base_rev" ]; then
+        echo "  base   = $XTGC_ROOT @ $base_rev  (VERSION.md vendored_commit)"
+    else
+        echo "  base   = <unavailable: vendored_commit 不是本仓 git 对象；内容不同 → 冲突，不覆盖>"
+    fi
 
     local s_files v_files
     s_files=$(cd "$staging" && find . -type f 2>/dev/null | sort)
     v_files=$(cd "$vendored" && find . -type f 2>/dev/null | sort)
 
     local take_new=() keep_local=() take_theirs=() keep_mine=() conflicts=() same=()
+    local base_tmp
+    base_tmp=$(mktemp)
 
     # 遍历 staging 全部文件 → 分类
     while IFS= read -r rel; do
@@ -390,26 +430,27 @@ apply_one() {
             take_new+=("$rel")
             continue
         fi
-        local s_content v_content b_content=""
-        # 规范化 rel：find 输出带 ./ 前缀（git show 拒绝 ./），必须先清再查 base
         local rel_clean="${rel#./}"
-        # 规范化 EOL：core.autocrlf=true 让 vendored 工作树带 CRLF；
-        # 比较前 tr -d '\r'，避免误判冲突
-        s_content=$(cat "$s_file" | tr -d '\r')
-        v_content=$(cat "$v_file" | tr -d '\r')
-        if [ -n "$base_head" ]; then
-            b_content=$(git -C "$XTGC_ROOT" show "${base_head}:vendor/${skill}/${rel_clean}" 2>/dev/null | tr -d '\r') || b_content=""
-        fi
-        if [ "$v_content" = "$s_content" ]; then
+        if _cmp_vendor_files "$v_file" "$s_file"; then
             same+=("$rel")
-        elif [ "$v_content" = "$b_content" ]; then
+            continue
+        fi
+        local has_base=0
+        if [ -n "$base_rev" ] && git -C "$XTGC_ROOT" show "${base_rev}:vendor/${skill}/${rel_clean}" > "$base_tmp" 2>/dev/null; then
+            has_base=1
+        else
+            : > "$base_tmp"
+        fi
+        if [ "$has_base" -eq 1 ] && _cmp_vendor_files "$v_file" "$base_tmp"; then
             take_theirs+=("$rel")
-        elif [ "$s_content" = "$b_content" ]; then
+        elif [ "$has_base" -eq 1 ] && _cmp_vendor_files "$s_file" "$base_tmp"; then
             keep_mine+=("$rel")
         else
+            # 无 base，或三方都不等：不覆盖本地（含已提交补丁）
             conflicts+=("$rel")
         fi
     done <<< "$s_files"
+    rm -f "$base_tmp"
 
     # 仅 vendored 独有（=本地定制）
     while IFS= read -r rel; do
