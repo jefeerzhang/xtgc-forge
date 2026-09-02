@@ -28,6 +28,46 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _LATIN_PROSE_WORD_RE = re.compile(r"[A-Za-z]{3,}")
 
 
+class _FenceParser:
+    """按 CommonMark 追踪 fenced code 块：类型（`/`~）+ 长度 + 缩进。
+
+    与 headings / strip_structure 共用，保证标题树与散文提取对代码块的判定一致。
+    """
+
+    __slots__ = ("state",)
+
+    def __init__(self) -> None:
+        # (fence_char, fence_length)；None 表示当前不在代码块内。
+        self.state: tuple[str, int] | None = None
+
+    def update(self, line: str) -> bool:
+        """推进一行并更新围栏状态。
+
+        返回该行是否应被当作「代码/结构行」——不进标题树、不从正文提取：
+        - 在代码块内（含开栏/收栏行）→ True；
+        - 4 空格或制表符缩进的代码行 → True（不开启围栏）；
+        - 其余 → False。
+        """
+        stripped = line.strip()
+        space_indent = len(line) - len(line.lstrip(" "))
+        is_indented_code = line.startswith("\t") or space_indent >= 4
+        if self.state is not None:
+            char, length = self.state
+            if not is_indented_code and re.fullmatch(
+                rf"{re.escape(char)}{{{length},}}\s*", stripped
+            ):
+                self.state = None
+            return True
+        if is_indented_code:
+            return True
+        m = _FENCE_OPEN_RE.match(stripped)
+        if m:
+            opener = m.group(1)
+            self.state = (opener[0], len(opener))
+            return True
+        return False
+
+
 @dataclass(frozen=True)
 class Heading:
     level: int   # 1-6
@@ -44,24 +84,9 @@ def headings(content: str) -> list[Heading]:
     """
     lines = content.splitlines()
     raw: list[tuple[int, int, str]] = []  # (line_idx, level, text)
-    fence: tuple[str, int] | None = None
+    fence = _FenceParser()
     for i, line in enumerate(lines):
-        stripped = line.strip()
-        space_indent = len(line) - len(line.lstrip(" "))
-        is_indented_code = line.startswith("\t") or space_indent >= 4
-        if fence is not None:
-            fence_char, fence_length = fence
-            if not is_indented_code and re.fullmatch(
-                rf"{re.escape(fence_char)}{{{fence_length},}}\s*", stripped
-            ):
-                fence = None
-            continue
-        if is_indented_code:
-            continue
-        fence_match = _FENCE_OPEN_RE.match(stripped)
-        if fence_match:
-            opener = fence_match.group(1)
-            fence = (opener[0], len(opener))
+        if fence.update(line):
             continue
         m = _HEADING_RE.match(line.lstrip())
         if not m:
@@ -168,13 +193,10 @@ def strip_structure(text: str) -> str:
     """剥离 markdown 结构行（标题/表格/代码块/公式块/分隔线/列表标记/引用标记），只留真散文。"""
     lines = text.splitlines()
     out = []
-    in_code = False
+    fence = _FenceParser()
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("```"):
-            in_code = not in_code
-            continue
-        if in_code:
+        if fence.update(line):
             continue
         if re.match(r"^#{1,6}\s", stripped):  # 标题
             continue

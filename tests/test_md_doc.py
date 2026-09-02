@@ -299,6 +299,46 @@ def test_structure_lines_removed():
     assert "列表项" in out and "引用文" in out
 
 
+def test_strip_structure_tilde_fence_removed():
+    """~~~ fence 内的行不进散文提取。"""
+    md = "## 标题\n~~~python\ncode_line\n~~~\n正文。"
+    out = md_doc.strip_structure(md)
+    assert "code_line" not in out and "标题" not in out
+    assert "正文。" in out
+
+
+def test_strip_structure_tilde_fence_ignores_backtick_closer():
+    """~~~ fence 内的 ``` 不得提前关闭，代码块内容仍被剥除。"""
+    md = "## 标题\n~~~text\n```\ncode_line\n~~~\n正文。"
+    out = md_doc.strip_structure(md)
+    assert "code_line" not in out and "```" not in out
+    assert "正文。" in out
+
+
+def test_strip_structure_long_fence_not_closed_by_shorter():
+    """四字 fence 不得被三字 fence 提前关闭。"""
+    md = "````text\n```\ncode_line\n````\n正文。"
+    out = md_doc.strip_structure(md)
+    assert "code_line" not in out
+    assert "正文。" in out
+
+
+def test_strip_structure_indented_closer_is_content():
+    """四空格缩进的 fence 标记是内容，不得关闭代码块。"""
+    md = "```text\n    ```\ncode_line\n```\n正文。"
+    out = md_doc.strip_structure(md)
+    assert "code_line" not in out
+    assert "正文。" in out
+
+
+def test_strip_structure_indented_code_block_removed():
+    """四空格缩进的代码块（非围栏）也应从散文提取中剥除。"""
+    md = "# 标题\n    code_line\n正文。"
+    out = md_doc.strip_structure(md)
+    assert "code_line" not in out and "标题" not in out
+    assert "正文。" in out
+
+
 def test_english_cite_line_kept_for_sentence_gate():
     """含 \\cite 的英文句子是散文，不是公式行。"""
     line = (
