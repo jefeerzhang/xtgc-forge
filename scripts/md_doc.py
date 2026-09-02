@@ -21,9 +21,11 @@ from dataclasses import dataclass
 # # 后允许零空白（兼容「#整合附录」写法，与历史闸门语义一致）；
 # CommonMark：标题最多缩进 3 空格；4 空格起是代码块，不是标题。
 _HEADING_RE = re.compile(r"^(#{1,6})\s*(.*)$")
+_FENCE_OPEN_RE = re.compile(r"^(`{3,}|~{3,})")
 _LATEX_CMD_RE = re.compile(r"\\[a-zA-Z]+")
+_MATH_RELATION_RE = re.compile(r"(?:=|<=|>=|<|>|≈|≤|≥|\\(?:approx|leq|geq|sim)\b)")
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
-_LATIN_WORD_RE = re.compile(r"[A-Za-z]{3,}")
+_LATIN_PROSE_WORD_RE = re.compile(r"[A-Za-z]{3,}")
 
 
 @dataclass(frozen=True)
@@ -37,23 +39,29 @@ class Heading:
 def headings(content: str) -> list[Heading]:
     """解析标题树。边界语义：同级或更高级的标题才算分节边界。
 
-    fenced code（```）与 4 空格缩进代码块内的行不进入标题树，
+    fenced code（``` / ~~~）与 4 空格缩进代码块内的行不进入标题树，
     避免 Python/Stata 注释「# 整合附录」把正文切进附录豁免区。
     """
     lines = content.splitlines()
     raw: list[tuple[int, int, str]] = []  # (line_idx, level, text)
-    in_fence = False
+    fence: tuple[str, int] | None = None
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("```"):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if line.startswith("\t"):
-            continue
         space_indent = len(line) - len(line.lstrip(" "))
-        if space_indent >= 4:
+        is_indented_code = line.startswith("\t") or space_indent >= 4
+        if fence is not None:
+            fence_char, fence_length = fence
+            if not is_indented_code and re.fullmatch(
+                rf"{re.escape(fence_char)}{{{fence_length},}}\s*", stripped
+            ):
+                fence = None
+            continue
+        if is_indented_code:
+            continue
+        fence_match = _FENCE_OPEN_RE.match(stripped)
+        if fence_match:
+            opener = fence_match.group(1)
+            fence = (opener[0], len(opener))
             continue
         m = _HEADING_RE.match(line.lstrip())
         if not m:
@@ -143,16 +151,17 @@ def body_before(content: str, heading_substr: str) -> str:
 def _is_pure_formula_line(stripped: str) -> bool:
     """整行是公式/符号，不是夹了 LaTeX 的散文。
 
-    有反斜杠命令、无汉字、去掉命令后剩余拉丁词 < 3 个 → 公式行。
-    「This ... \\cite{x} ...」这类英文句会留下足够单词，不剥。
+    同时出现 LaTeX 命令和数学关系运算符，且没有普通英文词时，
+    才按公式行处理。英文散文和 Windows 路径均保留给正文闸门。
     """
     if not _LATEX_CMD_RE.search(stripped):
         return False
     if _CJK_RE.search(stripped):
         return False
-    rest = _LATEX_CMD_RE.sub(" ", stripped)
-    rest = re.sub(r"[{}\\^_&=+0-9.,;:()\[\]\-]", " ", rest)
-    return len(_LATIN_WORD_RE.findall(rest)) < 3
+    if not _MATH_RELATION_RE.search(stripped):
+        return False
+    without_commands = _LATEX_CMD_RE.sub(" ", stripped)
+    return not _LATIN_PROSE_WORD_RE.search(without_commands)
 
 
 def strip_structure(text: str) -> str:

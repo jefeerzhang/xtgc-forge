@@ -195,6 +195,13 @@ def test_english_cite_long_sentence_still_caught():
     assert any("超过" in e for e in errors), f"英文 \\cite 超长句应被抓;errors={errors}"
 
 
+def test_long_english_windows_path_still_caught():
+    """含 Windows 路径的无句界英文正文仍须进入断句闸。"""
+    line = ("We go to " * 16) + r"C:\Users\jefeer\repo"
+    errors = check_step.check_readability(line + "\n")
+    assert any("超过" in e for e in errors), f"Windows 路径超长句应被抓;errors={errors}"
+
+
 def test_matrix_does_not_count_rows_after_appendix_a():
     """附录 A 只有 4 行时，同级「参考文献」里的表行不得凑成 5 行误放行。"""
     header = "| 序号 | 文献 | 期刊 | 方法 | 主要发现 | 关联 |"

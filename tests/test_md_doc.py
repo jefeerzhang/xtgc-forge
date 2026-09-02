@@ -54,6 +54,13 @@ def test_headings_skip_four_space_indented_code():
     assert [h.text for h in tree] == ["报告", "下一节"]
 
 
+def test_indented_backticks_do_not_open_fence():
+    """四空格缩进的 ``` 是代码内容，不得吞掉后续真实标题。"""
+    md = "# 报告\n    ```python\n## 下一节\n正文。\n"
+    tree = md_doc.headings(md)
+    assert [h.text for h in tree] == ["报告", "下一节"]
+
+
 # ---------- section_text（原 _extract_section 语义）----------
 
 def test_section_h2_keeps_deeper_h3_subsections():
@@ -198,6 +205,75 @@ def test_body_before_ignores_fence_fake_appendix():
     assert "附录内容。" not in body
 
 
+def test_body_before_ignores_tilde_fence_fake_appendix():
+    """~~~ fence 内的假附录标题不得截断正文。"""
+    md = (
+        "# 报告\n开场。\n"
+        "~~~python\n"
+        "# 整合附录\n"
+        "x = 1\n"
+        "~~~\n"
+        "正文继续。\n"
+        "## 整合附录\n"
+        "附录内容。\n"
+    )
+    body = md_doc.body_before(md, "整合附录")
+    assert "开场。" in body
+    assert "正文继续。" in body
+    assert "附录内容。" not in body
+
+
+def test_body_before_tilde_fence_ignores_backtick_closer():
+    """~~~ fence 内的 ``` 不得提前关闭代码块。"""
+    md = (
+        "# 报告\n开场。\n"
+        "~~~text\n"
+        "```\n"
+        "# 整合附录\n"
+        "~~~\n"
+        "正文继续。\n"
+        "## 整合附录\n"
+        "附录内容。\n"
+    )
+    body = md_doc.body_before(md, "整合附录")
+    assert "正文继续。" in body
+    assert "附录内容。" not in body
+
+
+def test_body_before_long_fence_ignores_shorter_closer():
+    """四字符 fence 不得被三字符 fence 提前关闭。"""
+    md = (
+        "# 报告\n开场。\n"
+        "````text\n"
+        "```\n"
+        "# 整合附录\n"
+        "````\n"
+        "正文继续。\n"
+        "## 整合附录\n"
+        "附录内容。\n"
+    )
+    body = md_doc.body_before(md, "整合附录")
+    assert "正文继续。" in body
+    assert "附录内容。" not in body
+
+
+def test_body_before_fence_ignores_indented_closer():
+    """四空格缩进的 fence 标记是代码内容，不得关闭代码块。"""
+    md = (
+        "# 报告\n开场。\n"
+        "```text\n"
+        "    ```\n"
+        "# 整合附录\n"
+        "```\n"
+        "正文继续。\n"
+        "## 整合附录\n"
+        "附录内容。\n"
+    )
+    body = md_doc.body_before(md, "整合附录")
+    assert "正文继续。" in body
+    assert "附录内容。" not in body
+
+
 # ---------- strip_structure（原 _strip_md_structure 语义）----------
 
 def test_cjk_adjacent_emphasis_stripped():
@@ -232,6 +308,20 @@ def test_english_cite_line_kept_for_sentence_gate():
     out = md_doc.strip_structure(line)
     assert "identification" in out
     assert "smith2020" in out
+
+
+def test_short_english_cite_line_kept_for_gate():
+    """短英文正文含引用命令时仍是散文，不能因词数少被整行剥除。"""
+    line = r"The t_score \cite{x}"
+    out = md_doc.strip_structure(line)
+    assert "t_score" in out
+    assert "cite{x}" in out
+
+
+def test_english_prose_with_inline_equation_is_kept():
+    """含 LaTeX 等式的英文陈述仍是散文，不能整行剥除。"""
+    line = r"The coefficient \beta = 0.5 is positive"
+    assert md_doc.strip_structure(line) == line
 
 
 def test_pure_equation_line_still_stripped():
