@@ -1,16 +1,5 @@
 # xtgc-forge
 
-## Agent skills
-
-### Issue tracker
-
-Issues 存放在 GitHub Issues，全部通过 `gh` CLI 操作。See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-五个 canonical triage roles，label 字符串与 role 同名。See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context：repo root 的 `CONTEXT.md` + `docs/adr/`.
-See `docs/agents/domain.md`.
+- **Create, read, comment, label, or block an issue** → `docs/agents/issue-tracker.md` (全部通过 `gh` CLI)。
+- **Apply a triage role (AFK-ready, needs-info, wontfix, …)** → `docs/agents/triage-labels.md`。
+- **Exploring the codebase, naming a concept, or writing a proposal** → 先读 repo 根的 `CONTEXT.md` 与 `docs/adr/`。

@@ -1,17 +1,13 @@
 ---
 name: 选题工坊
 description: |
-  社科人文向的"用户文献 → 选题研究计划"流程纪律产品。
-  输入用户自备的 PDF 文献(5-50 篇)+ 模糊领域;过程产出矩阵/gap/候选主题/假设/识别;
-  **用户主交付仅 1 份自洽完整的研究计划报告**:正文六段(题目→为何→意义→假设→假设依据→怎么做)
-  + 文内附录(文献矩阵/要点/Gap/候选与选定/识别要点);论述须充分,禁止一句话观点。
-  强制 5 次 Checkpoint 硬暂停(文献/矩阵/主题/假设/交付)+ 独立审查 verdict(scan / topics)+ topic_scores 6 维评分。
-  不调任何自动文献检索(WebSearch / arXiv / PubMed / Semantic Scholar / Sci-Hub)。
-  适用:经管 / 社会学 / 教育学 / 传播学 / 公共管理等社科人文实证研究的选题阶段。
-  触发词:选题工坊、开题、选题、找 gap、提假设、文献综述、研究假设、
-  research question from literature、hypothesis from review、lit-driven、
-  开题报告、导师说...自己找方向、我的文献已读但不知道怎么选题、
-  从 PDF 出选题、文献矩阵、topic score、独立审查、六段式研究计划报告、选题框架、金样例。
+  社科人文向「用户文献 → 选题研究计划」流程纪律。
+  以用户自备的 5-50 篇 PDF 为唯一输入,主交付 = 1 份自洽完整的六段式研究计划报告(题目→为何→意义→假设→依据→怎么做)。
+  强制 5 次 Checkpoint 硬暂停(文献/矩阵/主题/假设/交付),每闸必须用户显式确认,禁止代选/合并跳过。
+  反坍缩:先点名最安全题(T≥0.80 模态)再分层替代;3 主推覆盖 ≥2 层级且至少 1 个 T≤0.50。
+  贡献类型门:每个候选必答「揭示了什么」,答不上或与标题雷同 = 回炉。
+  适用:经管/社会学/教育学/传播学/公共管理的硕博开题与期刊投稿选题阶段。
+  触发词:选题工坊、开题、找 gap、提假设、我的文献已读但不知道怎么选题、导师说...自己找方向、从 PDF 出选题、literature-driven topic、hypothesis from review、research question from literature、lit-driven、开题报告、文献综述、研究假设。
 version: "0.3.23"
 license: MIT
 ---
@@ -260,7 +256,7 @@ Step 6 · 用户主交付     六段式研究计划报告(过程文件降级为�
 - 预期效应方向
 - **研究类型标签**(推断性 / 描述性 / 质性)
 - **降级条件**(什么情况下退到备选)
-- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative):inline 启发式:0.55–0.80 safe(加情境/调节/聚焦子样本,可保底发表);0.35–0.55 differentiated(新机制/边界条件/政策组合);<0.35 innovative(挑战主流假设/反向因果);≥0.80 为模态区,应避免。同期展开字段:`t_score` in topic_scores.json / Gap-C1 = Step 2c 五类 Gap 第 1 类「已知区」/ Checkpoint #N = 5 闸强制暂停第 N 闸。详见「反坍缩机制」。
+- **T-Score(0-1)+ 层级 tier**(safe / differentiated / innovative):T-Score 分层定义见「反坍缩机制」(0.55–0.80 safe, 0.35–0.55 differentiated, <0.35 innovative, ≥0.80 模态区应避免)。同期展开字段:`t_score` in topic_scores.json / Gap-C1 = Step 2c 五类 Gap 第 1 类「已知区」/ Checkpoint #N = 5 闸强制暂停第 N 闸。
 
 **2 备选**:降级场景的备选,每个含:
 - 来源 Gap
@@ -782,17 +778,6 @@ verdict 字段校验规则见 `scripts/check_step.py` 的 `check_review()` 函�
 
 ## TODO(后续迭代)
 
-- [x] 加 `examples/` 子目录,放 1 个完整跑通的例子(v0.2.7 已有:气候风险对企业绿色转型)
-- [x] 加 `README.md`,讲清安装和触发示例
-- [x] 加 `LICENSE` 文件(MIT)
-- [x] 跑 1 个真实社科选题实测,记录每步产出
-- [x] 加 `test-prompts.json`,放 2-3 个测试 prompt(v0.2.8: full-pipeline / 文献不足 / 出gap)
-- [x] example 补输入端材料(v0.2.8: inputs/00_任务元信息 + literature-list; Step1 与气候案例对齐)
-- [x] 写 1 篇 README 的"30 秒看明白"展示图(v0.3.0:ASCII 流程图 + 6 个徽章 + 触发词云)
-- [x] 加 CHANGELOG.md(v0.3.0:为什么改叙事)
-- [x] 加 mermaid 流水线图(v0.3.0: assets/diagram/pipeline.mermaid)
-- [x] 加 mermaid 5 闸时序图(v0.3.0: assets/diagram/checkpoint-flow.mermaid)
-- [x] 加同行对比可视化版(v0.3.0: assets/comparison.md,5 直接 + 8 间接)
 - [ ] 加第 2 个跨学科案例(教育/传播/公共管理之一)
 - [ ] 录 30 秒 GIF 展示 5 闸硬暂停(v0.3.0 留待下轮)
 
