@@ -1,0 +1,11 @@
+# ruff 配置 — 使 commit 声明「ruff 0 误报」可复现:python -m ruff check scripts/check_step_lib tests/test_verify.py
+line-length = 100
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# check_step_lib 的既有设计:helpers 通过 __all__ 把常量、私有 helper 与
+# Path/re/sys/json/md_doc/templates 透传给 `from .helpers import *` 的
+# gates.py / __init__.py。F403/F405 是该模式的固有误报,不是真实缺陷。
+"scripts/check_step_lib/**" = ["F403", "F405"]

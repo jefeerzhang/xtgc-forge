@@ -6,7 +6,7 @@
   from .gates import check_rerun_record
   ok, errs = check_rerun_record(workdir, report)
 
-依赖通过 `from .helpers import *` 取得 17 常量 + 9 helper;gates 函数体内
+依赖通过 `from .helpers import *` 取得 16 常量 + 9 helper;gates 函数体内
 对裸名(如 TIER_BANDS / _tier_of / _count_cjk_and_alnum)的引用会通过 helpers 解析。
 """
 from .helpers import *
@@ -467,8 +467,4 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
     if soft_warnings:
         return ("WARN", hard_errors, soft_warnings)
     return ("PASS", hard_errors, soft_warnings)
-
-
-# check_step6_quality 见文件头部第 23 行(F811 提示该函数被重复定义;
-# 此处仅为模块结尾的 __all__ 占位,真正实现统一收敛于上方单一版本)
 

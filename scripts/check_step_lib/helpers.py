@@ -3,7 +3,7 @@
 底层纯函数 + 闸门常量。gates / dispatch / cli 三层从这里取数。
 
 组织:
-  - 17 顶层 UPPER 常量(原 check_step.py 全量搬入,无新增无删除)
+  - 16 顶层 UPPER 常量(原 check_step.py 全量搬入,无新增无删除)
   - 9 私有 helper 函数(下划线前缀)
 
 依赖:md_doc(语义唯一来源)、templates(模板字面量与拦截规则同址)。
@@ -16,9 +16,9 @@ from pathlib import Path
 import md_doc
 import templates
 
-# 注意:本模块刻意不设 __all__,以便 `from .helpers import *`
-#  把 Path / re / sys / md_doc / templates 等标准依赖一并透传给 gates.py。
-#  (若显式列白名单,gates.py 里 `Path` / `re` 会 NameError。)
+# 注意:__all__ 除 16 常量与 9 个下划线 helper 外,还显式透传
+#  Path / re / sys / json / md_doc / templates 等依赖,使 `from .helpers import *`
+#  的 gates.py 能直接裸用这些名字(不透传的话,函数体内会 NameError)。
 
 ANTI_COLLAPSE_LOW_TIER = 0.50
 # __all__ 必须显式列出,否则 `from .helpers import *` 默认排除下划线开头

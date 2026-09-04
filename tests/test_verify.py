@@ -12,7 +12,6 @@ test_verify.py — check_step_lib 新公共 API 的契约测试。
 """
 from __future__ import annotations
 
-import importlib
 import subprocess
 import sys
 from pathlib import Path
