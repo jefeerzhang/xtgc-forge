@@ -36,13 +36,8 @@ from check_step_lib import (  # noqa: F401  (8 闸门 + 路由)
 )
 
 
-def _self_version() -> str:
-    """shim 版本(供 --version 与调试)。"""
-    return "check_step.py shim → check_step_lib (refactored)"
-
-
 if __name__ == "__main__":
-    # CLI 入口:转交 check_step_lib.cli(由 cli.py 的 if __name__ 触发)
+    # CLI 入口:转交 check_step_lib.cli
     from check_step_lib.cli import main
 
     main()

@@ -106,7 +106,10 @@ def check_interaction_log(workdir: Path) -> tuple[bool, list[str]]:
             ],
         )
 
-    content = _read_text_utf8(log_file)
+    try:
+        content = _read_text_utf8(log_file)
+    except Utf8ArtifactError as e:
+        return (False, [str(e)])
     confirmed: dict[str, list[str]] = {}
     for line in content.splitlines():
         line = line.strip()
@@ -150,7 +153,10 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     """
     errors = []
     rerun_file = _resolve_workdir_file(workdir, "00_复跑决策记录.md")
-    main_report = _read_text_utf8(main_report_path) if main_report_path.exists() else ""
+    try:
+        main_report = _read_text_utf8(main_report_path) if main_report_path.exists() else ""
+    except Utf8ArtifactError as e:
+        return (False, [str(e)])
 
     # 只认声明位:复跑说明 / 本复跑 / 附录F 表行「| 复跑 |」;「需复跑核实」等提及不算
     declares_rerun = any(re.search(p, main_report) for p in RERUN_DECLARE_PATTERNS)
@@ -164,7 +170,10 @@ def check_rerun_record(workdir: Path, main_report_path: Path) -> tuple[bool, lis
     if not rerun_file.exists():
         return (True, [])  # 未复跑,无需复跑记录
 
-    content = _read_text_utf8(rerun_file)
+    try:
+        content = _read_text_utf8(rerun_file)
+    except Utf8ArtifactError as e:
+        return (False, [str(e)])
     has_quote = any(p in content for p in RERUN_PHRASES)
     has_time = bool(re.search(r"\d{4}-\d{2}-\d{2}|\d{4}/\d{1,2}/\d{1,2}", content))
     is_empty = len(content.strip()) < RERUN_EMPTY_THRESHOLD or PLACEHOLDER_PATTERNS_RE.search(content) is not None
@@ -231,6 +240,8 @@ def check_topic_scores(workdir: Path) -> tuple[bool, list[str]]:
 
     try:
         data = json.loads(_read_text_utf8(score_file))
+    except Utf8ArtifactError as e:
+        return (False, [str(e)])
     except json.JSONDecodeError as e:
         return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
 
@@ -307,6 +318,8 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
 
     try:
         data = json.loads(_read_text_utf8(score_file))
+    except Utf8ArtifactError as e:
+        return (False, [str(e)])
     except json.JSONDecodeError as e:
         return (False, [f"topic_scores.json 不是合法 JSON:{e}"])
 
@@ -333,7 +346,7 @@ def check_anti_collapse(workdir: Path) -> tuple[bool, list[str]]:
             errors.append(f"{prefix}: 'tier'='{tier}' 非法,应为 safe/differentiated/innovative")
         elif 0 <= t_score <= 1 and (derived := _tier_of(t_score)) != tier:
             # 层级与分界不一致:提示但不断言(启发式标尺,防误杀)。
-            # t_score 越界时 _tier_of 会抛 ValueError;此时上面的「不在 0-1 范围」
+            # t_score 越界时 _tier_of 返回 out_of_band;上面的「不在 0-1 范围」
             # 已足够定位问题,不再追加「推导层级为…」的迷惑错。
             errors.append(
                 f"{prefix}: 't_score'={t_score} 推导层级为 '{derived}',"
@@ -385,7 +398,10 @@ def check_review(workdir: Path, target: str) -> tuple[str, list[str], list[str]]
         )
         return ("WARN", hard_errors, soft_warnings)
 
-    content = _read_text_utf8(review_file)
+    try:
+        content = _read_text_utf8(review_file)
+    except Utf8ArtifactError as e:
+        return ("FAIL", [str(e)], soft_warnings)
 
     # ----- 硬错:verdict 字段本身有问题 -----
     # 两段式:先宽捕获 verdict 值(在空白/中英文句读/markdown 符号处截断,

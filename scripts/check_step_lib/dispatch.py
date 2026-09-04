@@ -9,9 +9,10 @@ Step → 闸门路由表(STEP_RULES) + 顶层路由器。
         纯计算入口:不打印、不写文件、不 sys.exit。返回所有错误信息列表,
         空列表代表通过。是 verify() 与测试层的唯一调用面。
 
-  - check_step(workdir, step) -> int
-        CLI 入口:内部调用 check_step_router,把结果格式化成人类可读报告
-        打印到 stdout,返回 process exit code (0/1)。
+  - check_step(workdir, step) -> tuple[bool, list[str]]
+        CLI 打印层:内部调用 check_step_router,把失败结果格式化到 stdout,
+        把 review 软警告打到 stderr;返回 (passed, errors)。
+        成功时的 ✅ PASS 横幅由 cli.py 统一打印,避免双份。
 
 历史:这两个函数原是同一份代码,耦合 print 副作用;重构后分离,以便
 verify() 在 pytest capsys 下能干净运行(不触发 PermissionError)。
@@ -20,6 +21,7 @@ order matters:_check_step_* 先于 STEP_RULES 定义(后者 dict literal 引用�
 """
 from collections.abc import Callable
 from pathlib import Path
+import sys
 
 from .gates import (
     check_anti_collapse,
@@ -33,6 +35,7 @@ from .gates import (
 from .helpers import (
     GATES,
     VALID_STEPS,
+    Utf8ArtifactError,
     _read_text_utf8,
     _resolve_workdir_file,
 )
@@ -120,9 +123,8 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
 
     设计要点:
       - 返回 list[str] 而非 (bool, list),与 verify()/tests 期望一致
-      - soft warnings(如 review 警告)以 errors 形式累积返回,
-        调用方自己决定要不要 print。原先在旧 check_step 里直接 stderr 的
-        行为迁到 check_step() 入口层。
+      - soft warnings(如 review 警告)不进 errors;由 check_step() 打印层打到 stderr。
+        原先在旧 check_step 里直接 stderr 的行为迁回打印层,router 保持纯计算。
     """
     workdir_path = Path(workdir)
 
@@ -186,7 +188,10 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
     if not file_path.exists():
         return [f"{rule['fail_msg']}\n  文件不存在:{file_path}(根目录与 process/ 均未找到)"]
 
-    content = _read_text_utf8(file_path)
+    try:
+        content = _read_text_utf8(file_path)
+    except Utf8ArtifactError as e:
+        return [str(e)]
     lines = content.splitlines()
 
     if len(lines) < rule["min_lines"]:
@@ -215,26 +220,47 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
     return errors
 
 
-# ---- 顶层:CLI 入口(调用 router + 打印报告) ---------------------------
+# ---- 顶层:CLI 打印层(调用 router + 报告;PASS 横幅留给 cli) -----------
+
+def _emit_review_soft_warnings(workdir, step: str) -> None:
+    """过程建议打到 stderr,不进入 errors、不阻塞退出码。"""
+    workdir_path = Path(workdir)
+    if step == "all":
+        for rt in ["scan", "topics"]:
+            _status, _hard, soft = check_review(workdir_path, rt)
+            for w in soft:
+                print(f"[review_{rt}.md] {w}", file=sys.stderr)
+        return
+    if step == "scan-review":
+        _status, _hard, soft = check_review(workdir_path, "scan")
+        for w in soft:
+            print(w, file=sys.stderr)
+        return
+    if step == "topics-review":
+        _status, _hard, soft = check_review(workdir_path, "topics")
+        for w in soft:
+            print(w, file=sys.stderr)
+
 
 def check_step(workdir, step: str) -> tuple[bool, list[str]]:
-    """CLI 入口(纯计算):内部调路由,把结果格式化成人类可读报告。
+    """CLI 打印层:调路由,失败时输出 bullet 报告;软警告走 stderr。
 
     与 check_step_router 的区别:
-      - 本函数 print() 报告到 stdout,失败时也 print() 到 stderr
-      - 本函数返回 (passed: bool, errors: list[str]) 与老 check_step.py 签名兼容
-      - cli.py 负责把 (passed, errors) 映射成 process exit code
+      - 本函数在失败时 print() bullet 到 stdout
+      - review 过程建议 print() 到 stderr(不进 errors)
+      - 成功时不打印 PASS(由 cli.py 统一打 ✅ Step X PASS,避免双份)
+      - 返回 (passed: bool, errors: list[str]) 与老 check_step.py 签名兼容
 
     业务逻辑全部委托给 check_step_router。
     """
+    _emit_review_soft_warnings(workdir, step)
     errors = check_step_router(workdir, step)
     passed = not errors
 
     if passed:
-        print(f"✅ step {step}: PASS (workdir={workdir})")
         return True, []
 
-    print(f"❌ step {step}: FAIL ({len(errors)} 项问题)")
+    print(f"❌ Step {step} FAIL")
     print(f"   workdir: {workdir}")
     # 每个错打 1 个 bullet;多行错后续行用 6 空格缩进保持人类可读
     # (测试用 ln.startswith("  - ") 计数,必须 1 条 err = 1 个 - 行)

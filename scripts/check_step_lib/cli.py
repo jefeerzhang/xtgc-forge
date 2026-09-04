@@ -29,14 +29,14 @@ def main():
         print(f"❌ 目录不存在:{args.workdir}")
         sys.exit(1)
 
+    # dispatch.check_step 失败时已输出 ❌ 与 bullet;成功横幅只在这里打一次。
+    # review 软警告由 check_step 打到 stderr。
     passed, _errors = check_step(args.workdir, args.step)
 
     if passed:
         print(f"✅ Step {args.step} PASS")
         sys.exit(0)
 
-    # dispatch.check_step 已经把 errors 列表逐条 bullet 输出(含 workdir 行),
-    # cli 层不再重复,只追加人类可读的修复建议与退出码映射。
     print()
     print("修复建议:")
     print("  1. 重新跑对应 step 的子命令")

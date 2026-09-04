@@ -50,6 +50,7 @@ __all__ = [
     "_count_paragraphs",
     "_force_utf8_stdio",
     "_is_table_separator",
+    "Utf8ArtifactError",
     "_read_text_utf8",
     "_resolve_workdir_file",
     "_self_version",
@@ -223,24 +224,31 @@ REVIEW_VALID_VERDICTS = {"PASS", "P0_OPEN", "FAIL", "NEEDS_HUMAN"}
 
 # --- 9 私有 helper 函数 ---------------------------------
 
+class Utf8ArtifactError(Exception):
+    """产物文件不是有效 UTF-8。由 router/gates 收成 errors;cli 再映射退出码。
+
+    不在这里 sys.exit:verify() / check_step_router 承诺无杀进程副作用。
+    """
+
+
 def _read_text_utf8(path: Path) -> str:
-    """读产物文件;非 UTF-8(常见:编辑器存成 GBK/ANSI)时给可操作的提示。"""
+    """读产物文件;非 UTF-8(常见:编辑器存成 GBK/ANSI)时抛 Utf8ArtifactError。"""
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
-        print(
+        raise Utf8ArtifactError(
             f"❌ {path.name} 不是有效的 UTF-8 文本(可能被存成了 GBK/ANSI)。"
-            f"请将其转存为 UTF-8 后重试。({exc})",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+            f"请将其转存为 UTF-8 后重试。({exc})"
+        ) from exc
+
 
 def _self_version() -> str:
     """从仓库根 SKILL.md frontmatter 读取版本号(唯一真源),避免硬编码滞后。
 
     与 check-ready.sh 的 SELF_VERSION 同源,防止脚本 banner 与仓库版本漂移。
+    本文件在 scripts/check_step_lib/,仓库根是 parents[2](不是 parent.parent)。
     """
-    skill = Path(__file__).resolve().parent.parent / "SKILL.md"
+    skill = Path(__file__).resolve().parents[2] / "SKILL.md"
     try:
         text = skill.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):

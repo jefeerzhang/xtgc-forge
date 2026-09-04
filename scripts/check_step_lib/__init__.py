@@ -21,6 +21,7 @@ from .dispatch import (
     check_step_router,
 )
 from .gates import *
+from .helpers import Utf8ArtifactError  # noqa: F401 — 显式列入 __all__
 from .helpers import *
 
 
@@ -81,6 +82,7 @@ __all__ = [
     "TIER_BANDS",
     "VALID_STEPS",
     "Verdict",
+    "Utf8ArtifactError",
     # 9 私有 helper(老 check_step.py 也是裸名暴露,shim 透传)
     "_count_cjk_and_alnum",
     "_count_matrix_data_rows",

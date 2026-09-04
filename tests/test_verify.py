@@ -64,17 +64,18 @@ def test_shim_exposes_new_public_api():
     assert callable(cs.check_step_router)
 
 
-def test_verify_returns_verdict_instance(tmp_path):
-    """verify(tmp_empty_workdir, '6') → Verdict(errors=(), passed=True)。"""
+def test_verify_returns_verdict_instance():
+    """verify(tmp_empty_workdir, '6') → Verdict 实例(空目录必 fail)。"""
+    import tempfile
     cs = _import_check_step()
-    # 空 workdir,Step 6 — 主报告文件不存在,会报"未找到主报告文件"
-    v = cs.verify(tmp_path, "6")
-    assert isinstance(v, cs.Verdict)
-    assert v.step == "6"
-    assert v.workdir == str(tmp_path)
-    # 空 errors 时 passed=True;空 workdir 上 Step 6 必 fail,但仍是 Verdict
-    assert isinstance(v.passed, bool)
-    assert isinstance(v.errors, tuple)
+    with tempfile.TemporaryDirectory() as d:
+        v = cs.verify(d, "6")
+        assert isinstance(v, cs.Verdict)
+        assert v.step == "6"
+        assert v.workdir == str(Path(d))
+        assert isinstance(v.passed, bool)
+        assert isinstance(v.errors, tuple)
+        assert not v.passed
 
 
 def test_verdict_unpacking_backward_compat():
@@ -88,14 +89,15 @@ def test_verdict_unpacking_backward_compat():
         assert list(errors) == list(v.errors)
 
 
-def test_verify_rejects_unknown_step(tmp_path):
+def test_verify_rejects_unknown_step():
     """未知 step 应返回 errors(行为契约,值不锁死)。"""
+    import tempfile
     cs = _import_check_step()
-    v = cs.verify(tmp_path, "99")
-    assert isinstance(v, cs.Verdict)
-    # 未知 step 必 fail(errors 非空)
-    assert not v.passed
-    assert len(v.errors) >= 1
+    with tempfile.TemporaryDirectory() as d:
+        v = cs.verify(d, "99")
+        assert isinstance(v, cs.Verdict)
+        assert not v.passed
+        assert len(v.errors) >= 1
 
 
 def test_cli_help_runs():
@@ -119,3 +121,58 @@ def test_import_path_does_not_break_existing_tests():
     assert hasattr(cs, "_tier_of")
     assert cs._tier_of(0.6) == "safe"
     assert cs._tier_of(-0.1) == "out_of_band"
+
+
+def test_self_version_reads_repo_root_skill_md():
+    """helpers 在 check_step_lib/ 下,须爬到仓库根 SKILL.md,不能读成 unknown。"""
+    cs = _import_check_step()
+    ver = cs._self_version()
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    import re
+    m = re.search(r'^version:\s*["\']?([^"\'\s]+)["\']?', skill, re.MULTILINE)
+    assert m, "SKILL.md 应有 version"
+    assert ver == m.group(1), f"期望 {m.group(1)!r},实际 {ver!r}"
+
+
+def test_router_gbk_file_returns_error_not_systemexit():
+    """非 UTF-8 产物应收成 errors,不得 sys.exit 杀掉 verify/router。"""
+    import tempfile
+    cs = _import_check_step()
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        content = "模糊领域:X\n文献清单:\n- a.pdf\n- b.pdf\n"
+        (wd / "Step1-input.md").write_bytes(content.encode("gbk"))
+        errors = cs.check_step_router(wd, "1")
+        assert errors, "GBK 文件应有错误"
+        assert any("UTF-8" in e for e in errors), errors
+        v = cs.verify(wd, "1")
+        assert not v.passed
+        assert any("UTF-8" in e for e in v.errors)
+
+
+def test_cli_pass_printed_once():
+    """CLI 成功路径只打一行 PASS(dispatch 不再重复横幅)。"""
+    golden = ROOT / "examples" / "漂绿治理-绿贷与环境税组合"
+    r = subprocess.run(
+        [sys.executable, str(SCRIPTS / "check_step.py"),
+         "--workdir", str(golden), "--step", "6"],
+        capture_output=True, text=True, encoding="utf-8", timeout=60,
+        cwd=str(ROOT),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert r.stdout.count("PASS") == 1, r.stdout
+
+
+def test_step_all_emits_review_soft_warnings_to_stderr():
+    """--step all 须把 review 过程建议打到 stderr,不进失败 bullet。"""
+    golden = ROOT / "examples" / "漂绿治理-绿贷与环境税组合"
+    r = subprocess.run(
+        [sys.executable, str(SCRIPTS / "check_step.py"),
+         "--workdir", str(golden), "--step", "all"],
+        capture_output=True, text=True, encoding="utf-8", timeout=60,
+        cwd=str(ROOT),
+    )
+    assert "review_scan.md" in r.stderr, r.stderr
+    assert "过程建议" in r.stderr or "不存在" in r.stderr, r.stderr
+    fail = [ln for ln in r.stdout.splitlines() if ln.startswith("  - ")]
+    assert not any("review_" in ln for ln in fail), fail

@@ -112,5 +112,6 @@ def test_gbk_encoded_artifact_gets_friendly_error():
             env=env,
         )
         assert r.returncode != 0
-        assert "UTF-8" in r.stderr, f"应有转存提示:\n{r.stderr}"
-        assert "Traceback" not in r.stderr
+        out = r.stdout + r.stderr
+        assert "UTF-8" in out, f"应有转存提示:\n{out}"
+        assert "Traceback" not in out
