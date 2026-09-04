@@ -3,6 +3,29 @@
 > 维护原则:本文件按"为什么改"叙事,而非"改了什么"列表。每版聚焦一段决策主线。
 > 详细 commit history 见 `git log`。release tag 由人工打。
 
+## v0.3.24 · 2026-09-04 · check_step 拆包:1005 行单体分层为 check_step_lib 包
+
+**主线**:R05 架构报告 Item #1。check_step.py 自 v0.3.21 起陆续吸收了闸门、路由、CLI、UTF-8 四类职责,1005 行单体让「闸门语义单一来源」开始失焦——测试想验证纯计算却被迫面对 print/exit 副作用。本版按职责把单体拆为分层包,校验逻辑逐字搬运,不放松任何拦截语义。
+
+**拆包**:
+- `scripts/check_step.py` 退化为 43 行 shim(`from check_step_lib import *`),对外 import 路径不变,老测试零改动可跑
+- `dispatch.py`:`check_step_router`(纯计算,返 list)与 `check_step`(打印层)分离——verify() 在 pytest capsys 下可干净运行,不再触发 PermissionError;错误 bullet 化(每 err 1 个 `-` 行,测试可解析)
+- `gates.py` 8 个 check_X 闸门;`helpers.py` 16 常量 + 9 私有 helper(经 `__all__` 通配透传);`cli.py` argparse + 顶部 `_force_utf8_stdio`(GBK 管道下避免 ✅ 崩溃);`__init__.py` Verdict 数据类 + 12 项 public API 透传
+
+**契约变更**:
+- `_tier_of` 越界返回 `"out_of_band"` 哨兵,替代 raise ValueError;上游 check_anti_collapse 先以 0≤t≤1 守卫并单独报「不在 0-1 范围」,哨兵仅是防御性兜底(docstring 已如实标注,不再声称上游直接路由)
+- scan-review / topics-review 的 WARN 不阻塞、软建议走 stderr;`--step all` 的 review 硬 FAIL 仍以 `[review_scan.md]` 前缀计入失败 bullet(本版补测试锚定该语义)
+- PASS 横幅仅由 cli 打印一次;非 UTF-8 产物由 `Utf8ArtifactError` 收进 errors,不再 sys.exit 杀掉 verify/router;`_self_version` 指向仓库根 SKILL.md,去掉 shim 硬编码版本
+
+**测试与工具**:
+- 新增 `tests/test_verify.py` 15 个契约用例(shim 导入 / 公共 API / Verdict tuple unpack / GBK 收错 / CLI 单次 PASS / `--step all` review 软警告与硬 FAIL 前缀、退出码),全量 135 passed / 0 failed
+- 新增 `ruff.toml`:E4/E7/E9/F,`check_step_lib/**` 豁免 F403/F405(通配透传为既有设计),「ruff 0 误报」从此可复现
+- 复审收尾:删除引用不存在代码的死注释,`dispatch.py` 抽 `_check_scores_and_collapse` 消除 3 处重复形状
+
+**文档**:AGENTS.md 与 SKILL.md 按写作规范重排;领域词汇见 `CONTEXT.md`。
+
+**影响范围**:`scripts/check_step.py`、`scripts/check_step_lib/*`(新)、`tests/test_verify.py`(新)、`ruff.toml`(新)、`tests/test_anti_collapse_tier_out_of_band.py`、`tests/test_encoding_robustness.py`、`README.md` 徽章、`.claude-plugin/marketplace.json`。
+
 ## v0.3.23 · 2026-08-31 · 闸门绕过与供应链 3-way 收口
 
 **主线**:近 20 次提交把切分收进 `md_doc`、把同步收进 `vendor_sync.sh` 之后,审查发现两处闸门可被合规外观的 Markdown 骗过,以及 `apply` 把 `HEAD` 当 merge-base 会覆盖已提交的本地补丁。本版只消除这些误放行/数据丢失,不放松拦截。

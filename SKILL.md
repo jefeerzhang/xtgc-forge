@@ -8,11 +8,11 @@ description: |
   贡献类型门:每个候选必答「揭示了什么」,答不上或与标题雷同 = 回炉。
   适用:经管/社会学/教育学/传播学/公共管理的硕博开题与期刊投稿选题阶段。
   触发词:选题工坊、开题、找 gap、提假设、我的文献已读但不知道怎么选题、导师说...自己找方向、从 PDF 出选题、literature-driven topic、hypothesis from review、research question from literature、lit-driven、开题报告、文献综述、研究假设。
-version: "0.3.23"
+version: "0.3.24"
 license: MIT
 ---
 
-# 选题工坊 v0.3.23
+# 选题工坊 v0.3.24
 
 ## 📊 流水线一览(图)
 
