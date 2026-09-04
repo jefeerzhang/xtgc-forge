@@ -1,39 +1,37 @@
 # -*- coding: utf-8 -*-
-"""s8 修复验证:_tier_of 对越界 t_score(> 1 或 < 0)直接抛 ValueError,不再静默回退到 "safe"。
+"""s8 修复验证:_tier_of 对越界 t_score(> 1 或 < 0)返回 "out_of_band" 哨兵字符串。
 
-契约:
-- t_score=2.0 → ValueError
-- t_score=-0.1 → ValueError
-- t_score=0.6(边界内)→ 正常返回层级
+历史:
+  - 早期实现静默回退到 "safe",触发「tier 与推导层级不一致」悖论错误
+  - 中期改为 raise ValueError,但上游 check_anti_collapse 必须自己 catch
+    后才能用一致消息提示用户,catch/raise 之间逻辑分散
+  - 现采用 sentinel 字符串 "out_of_band"(与 NIST tier 命名学一致),
+    上游直接用 `if tier == "out_of_band": ...` 路由,比 raise 更可控
 """
-import pytest
-
 import check_step  # type: ignore
 
 
-def test_tier_of_above_one_raises():
-    with pytest.raises(ValueError, match=r"不在 0-1 范围"):
-        check_step._tier_of(2.0)
+def test_tier_of_above_one_returns_out_of_band():
+    assert check_step._tier_of(2.0) == "out_of_band"
 
 
-def test_tier_of_negative_raises():
-    with pytest.raises(ValueError, match=r"不在 0-1 范围"):
-        check_step._tier_of(-0.1)
+def test_tier_of_negative_returns_out_of_band():
+    assert check_step._tier_of(-0.1) == "out_of_band"
 
 
 def test_tier_of_in_range_returns_band():
-    # 边界内不应抛错
-    assert check_step._tier_of(0.6) == "safe"          # 0.55 ≤ 0.6 < 0.81
-    assert check_step._tier_of(0.4) == "differentiated"  # 0.35 ≤ 0.4 < 0.55
-    assert check_step._tier_of(0.2) == "innovative"      # < 0.35
+    # 边界内不应抛错,正常 band 映射
+    assert check_step._tier_of(0.6) == "safe"           # 0.55 ≤ 0.6 < 0.81
+    assert check_step._tier_of(0.4) == "differentiated" # 0.35 ≤ 0.4 < 0.55
+    assert check_step._tier_of(0.2) == "innovative"     # < 0.35
     assert check_step._tier_of(0.81) == "safe"          # ≥ 0.80 兜底
 
 
 def test_check_anti_collapse_does_not_silently_coerce_out_of_band():
-    """check_anti_collapse 对越界 t_score 也应报错(不静默回退)。
+    """check_anti_collapse 对越界 t_score 也应报错(不静默回退到 safe)。
 
     通过构造一个 workdir 里的 topic_scores.json,t_score=2.0,
-    验证 errors 列表里出现明确的「不在 0-1 范围」消息,而不是被
+    验证 errors 列表里出现明确的越界消息,而不是被
     _tier_of 静默 coerce 成 "safe" 然后报「tier 与推导层级不一致」的怪错误。
     """
     import json
