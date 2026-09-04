@@ -18,7 +18,7 @@ scripts/check_step.py — THIN SHIM,保留向后兼容。
 迁移路径:下次大改时删除本 shim,把 `import check_step` 改为
   `from scripts.check_step_lib import check_step_router as check_step`。
 """
-from check_step_lib import *  # noqa: F401,F403  (17 常量 + 9 helper)
+from check_step_lib import *  # noqa: F401,F403  (16 常量 + 9 helper)
 from check_step_lib import (  # noqa: F401  (8 闸门 + 路由)
     check_placeholders,
     check_step6_quality,
@@ -29,6 +29,7 @@ from check_step_lib import (  # noqa: F401  (8 闸门 + 路由)
     check_anti_collapse,
     check_review,
     check_step,
+    check_step_detail,
     check_step_router,
     STEP_RULES,
     Verdict,

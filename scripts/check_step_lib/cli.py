@@ -30,7 +30,7 @@ def main():
         sys.exit(1)
 
     # dispatch.check_step 失败时已输出 ❌ 与 bullet;成功横幅只在这里打一次。
-    # review 软警告由 check_step 打到 stderr。
+    # review 软警告由 check_step_detail 一趟收齐后经 check_step 打到 stderr。
     passed, _errors = check_step(args.workdir, args.step)
 
     if passed:

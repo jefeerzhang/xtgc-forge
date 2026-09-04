@@ -7,10 +7,11 @@
 所有 11 个 test_*.py 的 `import check_step` 不需要改任何代码。
 
 新增公共 API(本 package 的正式入口):
-  - Verdict:报告闸门输出(typed 字典替代散落的 tuple)
-  - verify(workdir, step, file_name=None) -> Verdict:无 IO 的纯校验入口
-  - check_step_router(*args, **kwargs) -> list[str]:旧 check_step 的别名(向后兼容)
-  - 其余 9 个 check_X / 17 个常量 / 9 个 helper 仍可 from .gates / .helpers 取
+  - Verdict:报告闸门输出(errors + soft_warnings;passed 只看 errors)
+  - verify(workdir, step, file_name=None) -> Verdict:无 print/exit 的纯校验入口
+  - check_step_detail(...) -> (errors, soft_warnings):完整纯计算面
+  - check_step_router(...) -> list[str]:仅 errors 半边(向后兼容)
+  - 其余 check_X / 16 个常量 / 9 个 helper 仍可 from .gates / .helpers 取
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +19,7 @@ from pathlib import Path
 from .dispatch import (
     STEP_RULES,
     check_step,
+    check_step_detail,
     check_step_router,
 )
 from .gates import *
@@ -27,11 +29,17 @@ from .helpers import *
 
 @dataclass(frozen=True)
 class Verdict:
-    """verify() 的返回类型。errors 为空即通过。"""
+    """verify() 的返回类型。
+
+    errors 为空即硬闸通过(passed=True)。
+    soft_warnings 是过程建议(如缺 review_*.md),永不阻塞 passed;
+    与 CLI stderr 同源,供编排/agent 程序化消费。
+    """
     step: str
     workdir: str
     file: str | None
     errors: tuple  # tuple[str, ...],只读
+    soft_warnings: tuple = ()  # tuple[str, ...],只读
 
     @property
     def passed(self) -> bool:
@@ -44,25 +52,26 @@ class Verdict:
 
 
 def verify(workdir, step: str, file_name: str | None = None) -> Verdict:
-    """无 IO 副作用的校验入口(只读,不 print)。
+    """无 print/exit 副作用的校验入口(只读产物文件)。
 
     Returns:
-        Verdict(step, workdir, file, errors)
+        Verdict(step, workdir, file, errors, soft_warnings)
         verdict.passed = (len(errors) == 0)
-        list(verdict) == [passed, errors]  # 向后兼容旧 tuple unpacking
+        list(verdict) == [passed, errors]  # soft 不进 unpacking,保旧契约
     """
     workdir_path = Path(workdir)
-    errors = check_step_router(workdir_path, step, file_name=file_name)
+    errors, soft = check_step_detail(workdir_path, step, file_name=file_name)
     return Verdict(
         step=step,
         workdir=str(workdir_path),
         file=file_name,
         errors=tuple(errors),
+        soft_warnings=tuple(soft),
     )
 
 
 __all__ = [
-    # 17 常量(老 check_step.py 顶层全部)
+    # 16 常量(老 check_step.py 顶层全部;STEP_RULES 另列公共入口)
     "ANTI_COLLAPSE_LOW_TIER",
     "BODY_JARGON",
     "GATES",
@@ -93,7 +102,7 @@ __all__ = [
     "_resolve_workdir_file",
     "_self_version",
     "_tier_of",
-    # 8 个 check_X 闸门
+    # 8 个 check_X 闸门 + 路由
     "check_anti_collapse",
     "check_interaction_log",
     "check_placeholders",
@@ -102,6 +111,7 @@ __all__ = [
     "check_review",
     "check_step",
     "check_step6_quality",
+    "check_step_detail",
     "check_step_router",
     "check_topic_scores",
     "verify",

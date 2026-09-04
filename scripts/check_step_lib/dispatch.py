@@ -3,16 +3,19 @@ check_step_lib · dispatch.py
 
 Step → 闸门路由表(STEP_RULES) + 顶层路由器。
 
-本模块暴露两个对外函数,语义完全不同:
+本模块对外:
 
-  - check_step_router(workdir, step, _from_all=False) -> list[str]
-        纯计算入口:不打印、不写文件、不 sys.exit。返回所有错误信息列表,
-        空列表代表通过。是 verify() 与测试层的唯一调用面。
+  - check_step_detail(workdir, step, ...) -> (errors, soft_warnings)
+        纯计算入口:不打印、不写文件、不 sys.exit。
+        errors 空=硬闸通过;soft_warnings 是过程建议,永不阻塞。
+        review 硬/软同一趟 check_review,避免双读。
+
+  - check_step_router(...) -> list[str]
+        detail 的 errors 半边,兼容旧调用面。
 
   - check_step(workdir, step) -> tuple[bool, list[str]]
-        CLI 打印层:内部调用 check_step_router,把失败结果格式化到 stdout,
-        把 review 软警告打到 stderr;返回 (passed, errors)。
-        成功时的 ✅ PASS 横幅由 cli.py 统一打印,避免双份。
+        CLI 打印层:失败 bullet → stdout,soft → stderr;
+        ✅ PASS 横幅由 cli.py 统一打印。
 
 历史:这两个函数原是同一份代码,耦合 print 副作用;重构后分离,以便
 verify() 在 pytest capsys 下能干净运行(不触发 PermissionError)。
@@ -40,13 +43,19 @@ from .helpers import (
     _resolve_workdir_file,
 )
 
+# Step 3a 分段头:名称 → 固定文案(勿用 f「--- {name} 校验失败 ---」,
+# 中文名会多出空格,变成「反坍缩 校验失败」)。
+_SCORE_COLLAPSE_SECTION = {
+    "topic_scores.json": "--- topic_scores.json 校验失败 ---",
+    "反坍缩": "--- 反坍缩校验失败 ---",
+}
+
 # ---- 4 个 step-private 额外规则(STEP_RULES 引用) ---------------------
 
 def _check_scores_and_collapse(workdir_path: Path) -> list[tuple[str, list[str]]]:
     """topic_scores.json + 反坍缩两项校验;失败项以 (名称, errors) 返回。
 
-    名称同时用作 _check_step_3a 的「--- X 校验失败 ---」头与
-    --step all 的「[X] 错误」前缀,三处调用共用同一份命名。
+    名称用作 --step all 的「[X]」前缀;Step 3a 分段头走 _SCORE_COLLAPSE_SECTION。
     """
     failed: list[tuple[str, list[str]]] = []
     ts_passed, ts_errors = check_topic_scores(workdir_path)
@@ -56,6 +65,7 @@ def _check_scores_and_collapse(workdir_path: Path) -> list[tuple[str, list[str]]
     if not ac_passed:
         failed.append(("反坍缩", ac_errors))
     return failed
+
 
 def _check_step_2c(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
     """Step 2c 额外校验:「证据来源」≥ 3 条 + 占位符拦截。"""
@@ -72,7 +82,7 @@ def _check_step_3a(workdir_path: Path, content: str, file_path: Path, _from_all:
         return []
     errors: list[str] = []
     for name, errs in _check_scores_and_collapse(workdir_path):
-        errors.append(f"--- {name} 校验失败 ---")
+        errors.append(_SCORE_COLLAPSE_SECTION[name])
         errors.extend(errs)
     return errors
 
@@ -126,22 +136,44 @@ STEP_RULES: dict[str, Callable[..., list[str]]] = {
 }
 
 
-# ---- 顶层:纯计算路由(verify() 调用这一层) ---------------------------
+# ---- 顶层:纯计算路由(verify() / CLI 共用) ---------------------------
 
-def check_step_router(workdir, step: str, file_name: str | None = None, _from_all: bool = False) -> list[str]:
-    """纯计算:不 print、不 sys.exit。返回 errors list(空=通过)。
+def _collect_reviews(
+    workdir_path: Path, targets: list[str], *, prefixed: bool
+) -> tuple[list[str], list[str]]:
+    """一趟 check_review:硬错与软警告一起收齐。
 
-    设计要点:
-      - 返回 list[str] 而非 (bool, list),与 verify()/tests 期望一致
-      - soft warnings(如 review 警告)不进 errors;由 check_step() 打印层打到 stderr。
-        原先在旧 check_step 里直接 stderr 的行为迁回打印层,router 保持纯计算。
+    prefixed=True(--step all):硬/软均带 [review_{rt}.md] 前缀。
+    prefixed=False(scan-review / topics-review):保持裸文案。
+    """
+    hard_out: list[str] = []
+    soft_out: list[str] = []
+    for rt in targets:
+        status, hard, soft = check_review(workdir_path, rt)
+        if status == "FAIL":
+            if prefixed:
+                hard_out.extend(f"[review_{rt}.md] {e}" for e in hard)
+            else:
+                hard_out.extend(hard)
+        for w in soft:
+            soft_out.append(f"[review_{rt}.md] {w}" if prefixed else w)
+    return hard_out, soft_out
+
+
+def check_step_detail(
+    workdir, step: str, file_name: str | None = None, _from_all: bool = False
+) -> tuple[list[str], list[str]]:
+    """纯计算:不 print、不 sys.exit。返回 (errors, soft_warnings)。
+
+    soft_warnings 永不进入 errors、不阻塞 passed;CLI 打到 stderr,
+    verify() 放进 Verdict.soft_warnings。
     """
     workdir_path = Path(workdir)
 
     if step == "all":
         all_errors: list[str] = []
         for s in ["1", "2a", "2b", "2c", "3a", "3b", "4", "5", "6"]:
-            errs = check_step_router(workdir, s, _from_all=True)
+            errs, _soft = check_step_detail(workdir, s, _from_all=True)
             if errs:
                 all_errors.extend([f"[step {s}] {e}" for e in errs])
         for name, errs in _check_scores_and_collapse(workdir_path):
@@ -154,36 +186,39 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
             rr_passed, rr_errors = check_rerun_record(workdir_path, main_report)
             if not rr_passed:
                 all_errors.extend([f"[复跑授权] {e}" for e in rr_errors])
-        # v0.3.18 审查降级:review FAIL 计入 hard errors;soft 警告不计入失败列表
-        for rt in ["scan", "topics"]:
-            r_status, r_hard, _r_soft = check_review(workdir_path, rt)
-            if r_status == "FAIL":
-                all_errors.extend([f"[review_{rt}.md] {e}" for e in r_hard])
-        return all_errors
+        # v0.3.18:review 硬 FAIL 进 errors;soft 单独返回(同一趟 check_review)
+        hard, soft = _collect_reviews(workdir_path, ["scan", "topics"], prefixed=True)
+        all_errors.extend(hard)
+        return all_errors, soft
 
     if step == "scores":
-        return [e for _name, errs in _check_scores_and_collapse(workdir_path) for e in errs]
+        return (
+            [e for _name, errs in _check_scores_and_collapse(workdir_path) for e in errs],
+            [],
+        )
 
     review_target = {"scan-review": "scan", "topics-review": "topics"}.get(step)
     if review_target is not None:
-        # v0.3.18 审查降级:WARN(只有 soft)视为 PASS,不阻塞;FAIL(有 hard)阻塞
-        status, hard, _soft = check_review(workdir_path, review_target)
-        return list(hard) if status == "FAIL" else []
+        # WARN(只有 soft)不阻塞;FAIL(有 hard)阻塞——同一趟收集
+        return _collect_reviews(workdir_path, [review_target], prefixed=False)
 
     if step not in GATES:
-        return [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"]
+        return [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"], []
 
     rule = GATES[step]
     file_path = _resolve_workdir_file(workdir_path, rule["file"])
     errors: list[str] = []
 
     if not file_path.exists():
-        return [f"{rule['fail_msg']}\n  文件不存在:{file_path}(根目录与 process/ 均未找到)"]
+        return (
+            [f"{rule['fail_msg']}\n  文件不存在:{file_path}(根目录与 process/ 均未找到)"],
+            [],
+        )
 
     try:
         content = _read_text_utf8(file_path)
     except Utf8ArtifactError as e:
-        return [str(e)]
+        return [str(e)], []
     lines = content.splitlines()
 
     if len(lines) < rule["min_lines"]:
@@ -204,50 +239,37 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
     if rule.get("ban_placeholders"):
         errors.extend(check_placeholders(content, f"Step {step}"))
 
-    # 基础 GATES 通过后,分发到 per-step 额外规则(2c/3a/3b/6)
     extra = STEP_RULES.get(step)
     if extra is not None:
         errors.extend(extra(workdir_path, content, file_path, _from_all))
 
+    return errors, []
+
+
+def check_step_router(
+    workdir, step: str, file_name: str | None = None, _from_all: bool = False
+) -> list[str]:
+    """纯计算:返回 errors(空=硬闸通过)。soft 见 check_step_detail / Verdict。"""
+    errors, _soft = check_step_detail(workdir, step, file_name=file_name, _from_all=_from_all)
     return errors
 
 
-# ---- 顶层:CLI 打印层(调用 router + 报告;PASS 横幅留给 cli) -----------
-
-def _emit_review_soft_warnings(workdir, step: str) -> None:
-    """过程建议打到 stderr,不进入 errors、不阻塞退出码。
-
-    all 打印带 [review_{rt}.md] 前缀;单目标分支保持裸文案(与 router
-    的 hard 错误前缀风格对应)。
-    """
-    if step == "all":
-        targets, prefixed = ["scan", "topics"], True
-    elif step in ("scan-review", "topics-review"):
-        targets, prefixed = [step[: -len("-review")]], False
-    else:
-        return
-    workdir_path = Path(workdir)
-    for rt in targets:
-        _status, _hard, soft = check_review(workdir_path, rt)
-        for w in soft:
-            print(f"[review_{rt}.md] {w}" if prefixed else w, file=sys.stderr)
-
+# ---- 顶层:CLI 打印层(调用 detail + 报告;PASS 横幅留给 cli) -----------
 
 def check_step(workdir, step: str) -> tuple[bool, list[str]]:
-    """CLI 打印层:调路由,失败时输出 bullet 报告;软警告走 stderr。
+    """CLI 打印层:一趟 detail;失败 bullet → stdout,软警告 → stderr。
 
-    与 check_step_router 的区别:
-      - 本函数在失败时 print() bullet 到 stdout
-      - review 过程建议 print() 到 stderr(不进 errors)
+    与 check_step_detail 的区别:
+      - 失败时 print() bullet 到 stdout
+      - soft_warnings print() 到 stderr(不进 errors)
       - 成功时不打印 PASS(由 cli.py 统一打 ✅ Step X PASS,避免双份)
       - 返回 (passed: bool, errors: list[str]) 与老 check_step.py 签名兼容
-
-    业务逻辑全部委托给 check_step_router。
     """
-    _emit_review_soft_warnings(workdir, step)
-    errors = check_step_router(workdir, step)
-    passed = not errors
+    errors, soft = check_step_detail(workdir, step)
+    for w in soft:
+        print(w, file=sys.stderr)
 
+    passed = not errors
     if passed:
         return True, []
 

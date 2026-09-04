@@ -56,11 +56,12 @@ def test_shim_exposes_router_and_step_rules():
 
 
 def test_shim_exposes_new_public_api():
-    """verify() + Verdict + check_step_router 是新增公共 API。"""
+    """verify() + Verdict + check_step_router/detail 是新增公共 API。"""
     cs = _import_check_step()
     assert callable(cs.verify)
     assert isinstance(cs.Verdict, type)
     assert callable(cs.check_step_router)
+    assert callable(cs.check_step_detail)
 
 
 def test_verify_returns_verdict_instance():
@@ -209,3 +210,61 @@ def test_cli_step_all_review_hard_fail_exits_1_with_bullet():
         assert any(ln.startswith("  - [review_scan.md]") for ln in bullets), r.stdout
         # topics 的 review 文件缺失仍是软 WARN,只走 stderr
         assert "review_topics.md" in r.stderr, r.stderr
+
+
+def test_verify_exposes_soft_warnings_without_blocking():
+    """verify('--step all') 把过程建议放进 soft_warnings,不进 errors、不挡 passed 半边。"""
+    import tempfile
+    cs = _import_check_step()
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        # 仅缺 review → soft;其余闸门也会 fail,但 soft 必须非空且不含硬 verdict 错
+        v = cs.verify(wd, "all")
+        assert v.soft_warnings, "缺 review 时应有过程建议"
+        assert any("review_scan.md" in w for w in v.soft_warnings), v.soft_warnings
+        assert not any(w in v.errors for w in v.soft_warnings), (
+            "soft 不得混进 errors", v.errors, v.soft_warnings
+        )
+        # 有合法 review 时 soft 可空或仅剩其它建议;硬非法仍只在 errors
+        (wd / "review_scan.md").write_text(
+            "verdict: PASS\nreviewer: reviewer-deadbeef\n信任边界:无密码学身份保证\n",
+            encoding="utf-8",
+        )
+        (wd / "review_topics.md").write_text(
+            "verdict: PASS\nreviewer: reviewer-deadbeef\n信任边界:无密码学身份保证\n",
+            encoding="utf-8",
+        )
+        v2 = cs.verify(wd, "all")
+        assert not any("不存在" in w for w in v2.soft_warnings), v2.soft_warnings
+        assert not any("MAYBE" in e for e in v2.errors)
+
+
+def test_step_3a_anti_collapse_section_header_no_extra_space():
+    """Step 3a 反坍缩分段头须为「--- 反坍缩校验失败 ---」,不得多空格。"""
+    import sys
+    import tempfile
+    sys.path.insert(0, str(SCRIPTS))
+    from check_step_lib.dispatch import _check_step_3a  # type: ignore
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        # 直接打额外规则:空 workdir → scores/反坍缩均失败,断言分段头字面量
+        errors = _check_step_3a(wd, "", wd / "dummy.md", False)
+        assert "--- 反坍缩校验失败 ---" in errors, errors
+        assert "--- 反坍缩 校验失败 ---" not in errors
+        assert "--- topic_scores.json 校验失败 ---" in errors, errors
+
+
+def test_detail_single_pass_soft_matches_verify():
+    """check_step_detail 与 verify 同源;CLI soft 与 Verdict.soft_warnings 一致。"""
+    import tempfile
+    cs = _import_check_step()
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        (wd / "review_scan.md").write_text("verdict: MAYBE\n", encoding="utf-8")
+        errs, soft = cs.check_step_detail(wd, "all")
+        v = cs.verify(wd, "all")
+        assert list(v.errors) == errs
+        assert list(v.soft_warnings) == soft
+        assert any(e.startswith("[review_scan.md]") and "MAYBE" in e for e in errs)
+        assert any("review_topics.md" in w for w in soft)
