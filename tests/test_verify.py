@@ -175,3 +175,37 @@ def test_step_all_emits_review_soft_warnings_to_stderr():
     assert "过程建议" in r.stderr or "不存在" in r.stderr, r.stderr
     fail = [ln for ln in r.stdout.splitlines() if ln.startswith("  - ")]
     assert not any("review_" in ln for ln in fail), fail
+
+
+def test_step_all_review_hard_fail_enters_errors():
+    """--step all:review verdict 非法(硬 FAIL)须以 [review_scan.md] 前缀计入 errors。
+
+    与软 WARN 相对:WARN 只走 stderr,硬 FAIL 是失败 bullet,进 router 返回列表。
+    """
+    import tempfile
+    cs = _import_check_step()
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        (wd / "review_scan.md").write_text("verdict: MAYBE\n", encoding="utf-8")
+        errors = cs.check_step_router(wd, "all")
+        hit = [e for e in errors if e.startswith("[review_scan.md]") and "MAYBE" in e]
+        assert hit, f"review 硬 FAIL 应带 [review_scan.md] 前缀进 errors,实际:\n{errors}"
+
+
+def test_cli_step_all_review_hard_fail_exits_1_with_bullet():
+    """CLI --step all:review 硬 FAIL → 退出码 1,失败 bullet 进 stdout;软 WARN 仍走 stderr。"""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        (wd / "review_scan.md").write_text("verdict: MAYBE\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, str(SCRIPTS / "check_step.py"),
+             "--workdir", str(wd), "--step", "all"],
+            capture_output=True, text=True, encoding="utf-8", timeout=60,
+            cwd=str(ROOT),
+        )
+        assert r.returncode == 1, r.stdout + r.stderr
+        bullets = [ln for ln in r.stdout.splitlines() if ln.startswith("  - ")]
+        assert any(ln.startswith("  - [review_scan.md]") for ln in bullets), r.stdout
+        # topics 的 review 文件缺失仍是软 WARN,只走 stderr
+        assert "review_topics.md" in r.stderr, r.stderr

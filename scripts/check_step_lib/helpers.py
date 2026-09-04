@@ -350,10 +350,10 @@ def _count_paragraphs(section: str) -> int:
 def _tier_of(t_score: float) -> str:
     """由 t_score 推导层级(与 anti-collapse.md 分界一致)。
 
-    越界(< 0 或 > 1)返回 "out_of_band" 而非抛异常:
-    老 check_step.py 越界静默回退到 "safe" 会让 check_anti_collapse 同时报
-    「tier 非法」和「推导层级为 safe」两条互相矛盾的消息,反向比 raise 更难
-    调试;out_of_band 字符串作为合法 sentinel 让上层能识别。
+    越界(< 0 或 > 1)返回 "out_of_band" 而非抛异常:防止越界分被静默
+    映射成某个合法层级。调用方 check_anti_collapse 在调用前已用
+    0 <= t <= 1 守卫并单独报「不在 0-1 范围」,正常路径不会拿到该哨兵,
+    它仅是防御性兜底。
     """
     if t_score < 0 or t_score > 1:
         return "out_of_band"

@@ -42,6 +42,21 @@ from .helpers import (
 
 # ---- 4 个 step-private 额外规则(STEP_RULES 引用) ---------------------
 
+def _check_scores_and_collapse(workdir_path: Path) -> list[tuple[str, list[str]]]:
+    """topic_scores.json + 反坍缩两项校验;失败项以 (名称, errors) 返回。
+
+    名称同时用作 _check_step_3a 的「--- X 校验失败 ---」头与
+    --step all 的「[X] 错误」前缀,三处调用共用同一份命名。
+    """
+    failed: list[tuple[str, list[str]]] = []
+    ts_passed, ts_errors = check_topic_scores(workdir_path)
+    if not ts_passed:
+        failed.append(("topic_scores.json", ts_errors))
+    ac_passed, ac_errors = check_anti_collapse(workdir_path)
+    if not ac_passed:
+        failed.append(("反坍缩", ac_errors))
+    return failed
+
 def _check_step_2c(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
     """Step 2c 额外校验:「证据来源」≥ 3 条 + 占位符拦截。"""
     errors: list[str] = []
@@ -53,17 +68,12 @@ def _check_step_2c(workdir_path: Path, content: str, file_path: Path, _from_all:
 
 def _check_step_3a(workdir_path: Path, content: str, file_path: Path, _from_all: bool) -> list[str]:
     """Step 3a 额外校验:topic_scores.json + 反坍缩(_from_all 时由 --step all 顶层统一调用,跳过以避免双前缀)。"""
-    errors: list[str] = []
     if _from_all:
-        return errors
-    ts_passed, ts_errors = check_topic_scores(workdir_path)
-    if not ts_passed:
-        errors.append("--- topic_scores.json 校验失败 ---")
-        errors.extend(ts_errors)
-    ac_passed, ac_errors = check_anti_collapse(workdir_path)
-    if not ac_passed:
-        errors.append("--- 反坍缩校验失败 ---")
-        errors.extend(ac_errors)
+        return []
+    errors: list[str] = []
+    for name, errs in _check_scores_and_collapse(workdir_path):
+        errors.append(f"--- {name} 校验失败 ---")
+        errors.extend(errs)
     return errors
 
 
@@ -134,12 +144,8 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
             errs = check_step_router(workdir, s, _from_all=True)
             if errs:
                 all_errors.extend([f"[step {s}] {e}" for e in errs])
-        ts_passed, ts_errors = check_topic_scores(workdir_path)
-        if not ts_passed:
-            all_errors.extend([f"[topic_scores.json] {e}" for e in ts_errors])
-        ac_passed, ac_errors = check_anti_collapse(workdir_path)
-        if not ac_passed:
-            all_errors.extend([f"[反坍缩] {e}" for e in ac_errors])
+        for name, errs in _check_scores_and_collapse(workdir_path):
+            all_errors.extend([f"[{name}] {e}" for e in errs])
         il_passed, il_errors = check_interaction_log(workdir_path)
         if not il_passed:
             all_errors.extend([f"[交互留痕] {e}" for e in il_errors])
@@ -156,27 +162,13 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
         return all_errors
 
     if step == "scores":
-        ts_passed, ts_errors = check_topic_scores(workdir_path)
-        ac_passed, ac_errors = check_anti_collapse(workdir_path)
-        combined = []
-        if not ts_passed:
-            combined.extend(ts_errors)
-        if not ac_passed:
-            combined.extend(ac_errors)
-        return combined
+        return [e for _name, errs in _check_scores_and_collapse(workdir_path) for e in errs]
 
-    if step == "scan-review":
-        status, hard, _soft = check_review(workdir_path, "scan")
+    review_target = {"scan-review": "scan", "topics-review": "topics"}.get(step)
+    if review_target is not None:
         # v0.3.18 审查降级:WARN(只有 soft)视为 PASS,不阻塞;FAIL(有 hard)阻塞
-        if status == "FAIL":
-            return list(hard)
-        return []
-
-    if step == "topics-review":
-        status, hard, _soft = check_review(workdir_path, "topics")
-        if status == "FAIL":
-            return list(hard)
-        return []
+        status, hard, _soft = check_review(workdir_path, review_target)
+        return list(hard) if status == "FAIL" else []
 
     if step not in GATES:
         return [f"未知 step: {step}。合法 step: {', '.join(VALID_STEPS)}"]
@@ -223,23 +215,22 @@ def check_step_router(workdir, step: str, file_name: str | None = None, _from_al
 # ---- 顶层:CLI 打印层(调用 router + 报告;PASS 横幅留给 cli) -----------
 
 def _emit_review_soft_warnings(workdir, step: str) -> None:
-    """过程建议打到 stderr,不进入 errors、不阻塞退出码。"""
-    workdir_path = Path(workdir)
+    """过程建议打到 stderr,不进入 errors、不阻塞退出码。
+
+    all 打印带 [review_{rt}.md] 前缀;单目标分支保持裸文案(与 router
+    的 hard 错误前缀风格对应)。
+    """
     if step == "all":
-        for rt in ["scan", "topics"]:
-            _status, _hard, soft = check_review(workdir_path, rt)
-            for w in soft:
-                print(f"[review_{rt}.md] {w}", file=sys.stderr)
+        targets, prefixed = ["scan", "topics"], True
+    elif step in ("scan-review", "topics-review"):
+        targets, prefixed = [step[: -len("-review")]], False
+    else:
         return
-    if step == "scan-review":
-        _status, _hard, soft = check_review(workdir_path, "scan")
+    workdir_path = Path(workdir)
+    for rt in targets:
+        _status, _hard, soft = check_review(workdir_path, rt)
         for w in soft:
-            print(w, file=sys.stderr)
-        return
-    if step == "topics-review":
-        _status, _hard, soft = check_review(workdir_path, "topics")
-        for w in soft:
-            print(w, file=sys.stderr)
+            print(f"[review_{rt}.md] {w}" if prefixed else w, file=sys.stderr)
 
 
 def check_step(workdir, step: str) -> tuple[bool, list[str]]:

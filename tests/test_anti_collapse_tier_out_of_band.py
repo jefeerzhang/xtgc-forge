@@ -5,8 +5,11 @@
   - 早期实现静默回退到 "safe",触发「tier 与推导层级不一致」悖论错误
   - 中期改为 raise ValueError,但上游 check_anti_collapse 必须自己 catch
     后才能用一致消息提示用户,catch/raise 之间逻辑分散
-  - 现采用 sentinel 字符串 "out_of_band"(与 NIST tier 命名学一致),
-    上游直接用 `if tier == "out_of_band": ...` 路由,比 raise 更可控
+  - 现采用 sentinel 字符串 "out_of_band"(与 NIST tier 命名学一致)。
+
+注意:上游 check_anti_collapse 并不直接 `if tier == "out_of_band"` 路由——
+它先用 `0 <= t_score <= 1` 守卫并单独报「不在 0-1 范围」,因此不会拿到
+哨兵值;哨兵是防御性兜底,保证越界分永不静默映射成合法层级。
 """
 import check_step  # type: ignore
 
